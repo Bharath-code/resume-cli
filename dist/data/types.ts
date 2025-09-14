@@ -66,3 +66,35 @@ export interface ExportChoice {
   value: OutputFormat;
   extension: string;
 }
+
+export interface UserConfig {
+  theme: 'dark' | 'light' | 'colorful' | 'professional';
+  favorites: string[];
+  searchHistory?: string[];
+  lastUsed?: Date;
+}
+
+export interface ThemeColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+  success: string;
+  error: string;
+  warning: string;
+}
+
+export interface SearchResult {
+  section: string;
+  content: string;
+  context: string;
+  type: 'exact' | 'partial' | 'fuzzy';
+  score: number;
+}
+
+export interface ResumeStats {
+  yearsOfExperience: number;
+  projectCount: number;
+  techStackSize: number;
+  totalCompanies: number;
+  educationCount: number;
+}

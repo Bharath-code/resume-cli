@@ -4,11 +4,16 @@ import qrcode from 'qrcode';
 import clipboardy from 'clipboardy';
 import fs from 'fs';
 import { formatColoredResume, formatPlainResume, formatJsonResume, formatHtmlResume, formatPdfResume } from './formatting.js';
+import { loadConfig, saveConfig, getThemeColors } from './config.js';
+import { searchResume, getSearchSuggestions, groupResultsBySection } from './search.js';
+import { calculateResumeStats, displayResumeStats, displayTechBreakdown, displayExperienceTimeline } from './statistics.js';
 /**
  * Main interactive mode function
  */
 export async function runInteractiveMode(resumeData) {
-    console.log(chalk.cyanBright.bold('\n🚀 Interactive Resume Navigator\n'));
+    const config = loadConfig();
+    const colors = getThemeColors(config);
+    console.log(chalk[colors.primary].bold('\n🚀 Interactive Resume Navigator\n'));
     while (true) {
         const { action } = await inquirer.prompt([
             {
@@ -17,6 +22,10 @@ export async function runInteractiveMode(resumeData) {
                 message: 'What would you like to do?',
                 choices: [
                     { name: '📄 View Resume Sections', value: 'sections' },
+                    { name: '🔍 Search Resume', value: 'search' },
+                    { name: '📊 View Statistics', value: 'stats' },
+                    { name: '⭐ Manage Favorites', value: 'favorites' },
+                    { name: '🎨 Customize Theme', value: 'theme' },
                     { name: '📱 Generate QR Codes', value: 'qr' },
                     { name: '📋 Copy Contact Info', value: 'clipboard' },
                     { name: '💾 Export Resume', value: 'export' },
@@ -28,6 +37,18 @@ export async function runInteractiveMode(resumeData) {
             case 'sections':
                 await navigateSections(resumeData);
                 break;
+            case 'search':
+                await searchResumeInteractive(resumeData, config);
+                break;
+            case 'stats':
+                await showStatistics(resumeData, config);
+                break;
+            case 'favorites':
+                await manageFavorites(resumeData, config);
+                break;
+            case 'theme':
+                await customizeTheme(config);
+                break;
             case 'qr':
                 await generateQRCodes(resumeData);
                 break;
@@ -38,15 +59,197 @@ export async function runInteractiveMode(resumeData) {
                 await exportResume(resumeData);
                 break;
             case 'exit':
-                console.log(chalk.greenBright('\n👋 Thanks for using the interactive resume!\n'));
+                console.log(chalk[colors.accent]('\n👋 Thanks for using the interactive resume!\n'));
                 return;
         }
     }
 }
 /**
+ * Search resume interactively
+ */
+async function searchResumeInteractive(resumeData, config) {
+    const colors = getThemeColors(config);
+    while (true) {
+        const { searchQuery } = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'searchQuery',
+                message: 'Enter search term (or "back" to return):',
+                validate: (input) => input.trim().length > 0 || 'Please enter a search term'
+            }
+        ]);
+        if (searchQuery.toLowerCase() === 'back') {
+            return;
+        }
+        const results = searchResume(resumeData, searchQuery);
+        if (results.length === 0) {
+            console.log(chalk[colors.error]('\n❌ No results found for "' + searchQuery + '"\n'));
+            const suggestions = getSearchSuggestions(resumeData);
+            if (suggestions.length > 0) {
+                console.log(chalk[colors.secondary]('💡 Did you mean: ' + suggestions.join(', ') + '?\n'));
+            }
+            continue;
+        }
+        console.log(chalk[colors.success](`\n🔍 Found ${results.length} result(s) for "${searchQuery}":\n`));
+        const groupedResults = groupResultsBySection(results);
+        Object.entries(groupedResults).forEach(([section, sectionResults]) => {
+            console.log(chalk[colors.primary].bold(`\n📁 ${section}:`));
+            sectionResults.forEach((result) => {
+                console.log(`  • ${result.content} ${chalk[colors.secondary]('(Score: ' + result.score.toFixed(2) + ')')}`);
+            });
+        });
+        // Add to search history
+        config.searchHistory = config.searchHistory || [];
+        if (!config.searchHistory.includes(searchQuery)) {
+            config.searchHistory.unshift(searchQuery);
+            config.searchHistory = config.searchHistory.slice(0, 10); // Keep last 10 searches
+            saveConfig(config);
+        }
+        console.log('\n');
+    }
+}
+/**
+ * Show resume statistics
+ */
+async function showStatistics(resumeData, config) {
+    const colors = getThemeColors(config);
+    const { statsType } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'statsType',
+            message: 'What statistics would you like to view?',
+            choices: [
+                { name: '📊 General Statistics', value: 'general' },
+                { name: '💻 Technology Breakdown', value: 'tech' },
+                { name: '📅 Experience Timeline', value: 'timeline' },
+                { name: '🔙 Back to Main Menu', value: 'back' }
+            ]
+        }
+    ]);
+    switch (statsType) {
+        case 'general':
+            const stats = calculateResumeStats(resumeData);
+            displayResumeStats(stats, config);
+            break;
+        case 'tech':
+            displayTechBreakdown(resumeData, config);
+            break;
+        case 'timeline':
+            displayExperienceTimeline(resumeData, config);
+            break;
+        case 'back':
+            return;
+    }
+    await inquirer.prompt([{ type: 'input', name: 'continue', message: 'Press Enter to continue...' }]);
+}
+/**
+ * Manage favorites/bookmarks
+ */
+async function manageFavorites(resumeData, config) {
+    const colors = getThemeColors(config);
+    while (true) {
+        const { action } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'action',
+                message: 'Manage Favorites:',
+                choices: [
+                    { name: '⭐ View Favorites', value: 'view' },
+                    { name: '➕ Add to Favorites', value: 'add' },
+                    { name: '➖ Remove from Favorites', value: 'remove' },
+                    { name: '🔙 Back to Main Menu', value: 'back' }
+                ]
+            }
+        ]);
+        switch (action) {
+            case 'view':
+                if (config.favorites.length === 0) {
+                    console.log(chalk[colors.secondary]('\n📝 No favorites yet. Add some sections to your favorites!\n'));
+                }
+                else {
+                    console.log(chalk[colors.primary].bold('\n⭐ Your Favorites:\n'));
+                    config.favorites.forEach((fav, index) => {
+                        console.log(`${index + 1}. ${fav}`);
+                    });
+                    console.log('\n');
+                }
+                break;
+            case 'add':
+                const availableSections = Object.keys(resumeData).filter(key => key !== 'personalInfo' && !config.favorites.includes(key));
+                if (availableSections.length === 0) {
+                    console.log(chalk[colors.secondary]('\n✅ All sections are already in your favorites!\n'));
+                    break;
+                }
+                const { sectionToAdd } = await inquirer.prompt([
+                    {
+                        type: 'list',
+                        name: 'sectionToAdd',
+                        message: 'Select section to add to favorites:',
+                        choices: availableSections.map(section => ({
+                            name: section.charAt(0).toUpperCase() + section.slice(1),
+                            value: section
+                        }))
+                    }
+                ]);
+                config.favorites.push(sectionToAdd);
+                saveConfig(config);
+                console.log(chalk[colors.success](`\n✅ Added "${sectionToAdd}" to favorites!\n`));
+                break;
+            case 'remove':
+                if (config.favorites.length === 0) {
+                    console.log(chalk[colors.secondary]('\n📝 No favorites to remove.\n'));
+                    break;
+                }
+                const { sectionToRemove } = await inquirer.prompt([
+                    {
+                        type: 'list',
+                        name: 'sectionToRemove',
+                        message: 'Select section to remove from favorites:',
+                        choices: config.favorites.map(fav => ({
+                            name: fav.charAt(0).toUpperCase() + fav.slice(1),
+                            value: fav
+                        }))
+                    }
+                ]);
+                config.favorites = config.favorites.filter(fav => fav !== sectionToRemove);
+                saveConfig(config);
+                console.log(chalk[colors.success](`\n✅ Removed "${sectionToRemove}" from favorites!\n`));
+                break;
+            case 'back':
+                return;
+        }
+    }
+}
+/**
+ * Customize theme
+ */
+async function customizeTheme(config) {
+    const { themeChoice } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'themeChoice',
+            message: 'Choose a theme:',
+            choices: [
+                { name: '🌙 Dark Theme', value: 'dark' },
+                { name: '☀️ Light Theme', value: 'light' },
+                { name: '🌈 Colorful Theme', value: 'colorful' },
+                { name: '💼 Professional Theme', value: 'professional' },
+                { name: '🔙 Back to Main Menu', value: 'back' }
+            ]
+        }
+    ]);
+    if (themeChoice === 'back') {
+        return;
+    }
+    config.theme = themeChoice;
+    saveConfig(config);
+    const colors = getThemeColors(config);
+    console.log(chalk[colors.success](`\n✅ Theme changed to "${themeChoice}"!\n`));
+}
+/**
  * Navigate through resume sections
  */
-export async function navigateSections(resumeData) {
+async function navigateSections(resumeData) {
     const sectionChoices = [
         { name: '👤 Personal Info', value: 'personal' },
         { name: '📝 Profile Summary', value: 'profile' },

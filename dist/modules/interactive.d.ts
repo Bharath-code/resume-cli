@@ -4,10 +4,6 @@ import { ResumeData } from '../data/types.js';
  */
 export declare function runInteractiveMode(resumeData: ResumeData): Promise<void>;
 /**
- * Navigate through resume sections
- */
-export declare function navigateSections(resumeData: ResumeData): Promise<void>;
-/**
  * Generate QR codes for contact information
  */
 export declare function generateQRCodes(resumeData: ResumeData): Promise<void>;
