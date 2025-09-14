@@ -16,7 +16,17 @@ npx bharathkumar-palanisamy
 # 3) Scoped fallback with slash (alternative)
 npx @bharathkumar-palanisamy/resume
 ```
+## Launch interactive mode
+```bash
+npx bharathkumar-palanisamy  --interactive
 
+## Traditional CLI usage still works
+npx bharathkumar-palanisamy  --format json --section personal
+npx bharathkumar-palanisamy  --help
+npx bharathkumar-palanisamy  --version
+npx bharathkumar-palanisamy --section personal experience
+npx bharathkumar-palanisamy --format plain --output my-resume.txt
+```
 ## Local testing
 
 ```bash

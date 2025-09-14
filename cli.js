@@ -5,6 +5,9 @@ import { Command } from "commander";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import inquirer from "inquirer";
+import qrcode from "qrcode";
+import clipboardy from "clipboardy";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,7 +23,7 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.jso
  */
 
 // Resume data structure
-const resumeData = {
+export const resumeData = {
   personal: {
     name: "Bharathkumar Palanisamy",
     role: "Full-Stack Engineer (JavaScript / Node.js & React)",
@@ -298,7 +301,14 @@ program
   .option('-f, --format <type>', 'output format (colored, plain, json)', 'colored')
   .option('-s, --section <sections...>', 'specific sections to display (personal, profile, techStack, experience, projects, leadership, openSource, education)')
   .option('-o, --output <file>', 'save resume to file')
-  .action((options) => {
+  .option('-i, --interactive', 'enable interactive navigation mode')
+  .action(async (options) => {
+    // Handle interactive mode
+    if (options.interactive) {
+      await runInteractiveMode();
+      return;
+    }
+    
     let output;
     const sections = options.section;
     
@@ -340,5 +350,298 @@ program
       console.log(output);
     }
   });
+
+// Interactive mode function
+async function runInteractiveMode() {
+  console.log(chalk.cyanBright.bold('\n🚀 Interactive Resume Navigator\n'));
+  
+  while (true) {
+    const { action } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: 'What would you like to do?',
+        choices: [
+          { name: '📄 View Resume Sections', value: 'sections' },
+          { name: '📱 Generate QR Codes', value: 'qr' },
+          { name: '📋 Copy Contact Info', value: 'clipboard' },
+          { name: '💾 Export Resume', value: 'export' },
+          { name: '❌ Exit', value: 'exit' }
+        ]
+      }
+    ]);
+    
+    switch (action) {
+      case 'sections':
+        await navigateSections();
+        break;
+      case 'qr':
+        await generateQRCodes();
+        break;
+      case 'clipboard':
+        await copyToClipboard();
+        break;
+      case 'export':
+        await exportResume();
+        break;
+      case 'exit':
+        console.log(chalk.greenBright('\n👋 Thanks for using the interactive resume!\n'));
+        return;
+    }
+  }
+}
+
+// Navigate through resume sections
+async function navigateSections() {
+  const sectionChoices = [
+    { name: '👤 Personal Info', value: 'personal' },
+    { name: '📝 Profile', value: 'profile' },
+    { name: '⚡ Tech Stack', value: 'techStack' },
+    { name: '💼 Experience', value: 'experience' },
+    { name: '🚀 Projects', value: 'projects' },
+    { name: '👥 Leadership', value: 'leadership' },
+    { name: '🌟 Open Source', value: 'openSource' },
+    { name: '🎓 Education', value: 'education' },
+    { name: '📄 Full Resume', value: 'full' },
+    { name: '⬅️  Back to Main Menu', value: 'back' }
+  ];
+  
+  while (true) {
+    const { section } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'section',
+        message: 'Which section would you like to view?',
+        choices: sectionChoices
+      }
+    ]);
+    
+    if (section === 'back') break;
+    
+    console.log('\n' + '='.repeat(50));
+    if (section === 'full') {
+      console.log(formatColoredResume());
+    } else {
+      console.log(formatColoredResume([section]));
+    }
+    console.log('='.repeat(50) + '\n');
+    
+    // Ask if user wants to continue viewing sections
+    const { continueViewing } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'continueViewing',
+        message: 'Would you like to view another section?',
+        default: true
+      }
+    ]);
+    
+    if (!continueViewing) break;
+  }
+}
+
+// Generate QR codes for contact information
+async function generateQRCodes() {
+  const qrChoices = [
+    { name: '📧 Email', value: 'email' },
+    { name: '📱 Phone', value: 'phone' },
+    { name: '💼 LinkedIn', value: 'linkedin' },
+    { name: '🐙 GitHub', value: 'github' },
+    { name: '🌐 Portfolio', value: 'portfolio' },
+    { name: '⬅️  Back to Main Menu', value: 'back' }
+  ];
+  
+  while (true) {
+    const { contact } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'contact',
+        message: 'Generate QR code for which contact method?',
+        choices: qrChoices
+      }
+    ]);
+    
+    if (contact === 'back') break;
+    
+    let contactData = '';
+    let contactLabel = '';
+    
+    switch (contact) {
+      case 'email':
+        contactData = `mailto:${resumeData.personal.email.replace('📧 ', '')}`;
+        contactLabel = 'Email';
+        break;
+      case 'phone':
+        contactData = `tel:${resumeData.personal.phone.replace('📱 ', '')}`;
+        contactLabel = 'Phone';
+        break;
+      case 'linkedin':
+        contactData = resumeData.personal.linkedin.replace('🔗 ', '');
+        contactLabel = 'LinkedIn';
+        break;
+      case 'github':
+        contactData = resumeData.personal.github.replace('🐙 ', '');
+        contactLabel = 'GitHub';
+        break;
+      case 'portfolio':
+        contactData = resumeData.personal.portfolio.replace('🌐 ', '');
+        contactLabel = 'Portfolio';
+        break;
+    }
+    
+    try {
+      console.log(`\n${chalk.cyanBright.bold(`QR Code for ${contactLabel}:`)}`);
+      console.log(chalk.dim(`Data: ${contactData}\n`));
+      
+      const qrString = await qrcode.toString(contactData, {
+        type: 'terminal',
+        small: true
+      });
+      
+      console.log(qrString);
+      console.log(chalk.yellowBright('📱 Scan with your phone to access this contact info!\n'));
+      
+    } catch (error) {
+      console.error(chalk.red(`Error generating QR code: ${error.message}`));
+    }
+    
+    // Ask if user wants to generate another QR code
+    const { continueQR } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'continueQR',
+        message: 'Would you like to generate another QR code?',
+        default: true
+      }
+    ]);
+    
+    if (!continueQR) break;
+  }
+}
+
+// Copy contact information to clipboard
+async function copyToClipboard() {
+  const clipboardChoices = [
+    { name: '📧 Email Address', value: 'email' },
+    { name: '📱 Phone Number', value: 'phone' },
+    { name: '💼 LinkedIn URL', value: 'linkedin' },
+    { name: '🐙 GitHub URL', value: 'github' },
+    { name: '🌐 Portfolio URL', value: 'portfolio' },
+    { name: '📄 All Contact Info', value: 'all' },
+    { name: '⬅️  Back to Main Menu', value: 'back' }
+  ];
+  
+  while (true) {
+    const { contact } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'contact',
+        message: 'What would you like to copy to clipboard?',
+        choices: clipboardChoices
+      }
+    ]);
+    
+    if (contact === 'back') break;
+    
+    let clipboardData = '';
+    let contactLabel = '';
+    
+    switch (contact) {
+      case 'email':
+        clipboardData = resumeData.personal.email.replace('📧 ', '');
+        contactLabel = 'Email address';
+        break;
+      case 'phone':
+        clipboardData = resumeData.personal.phone.replace('📱 ', '');
+        contactLabel = 'Phone number';
+        break;
+      case 'linkedin':
+        clipboardData = resumeData.personal.linkedin.replace('🔗 ', '');
+        contactLabel = 'LinkedIn URL';
+        break;
+      case 'github':
+        clipboardData = resumeData.personal.github.replace('🐙 ', '');
+        contactLabel = 'GitHub URL';
+        break;
+      case 'portfolio':
+        clipboardData = resumeData.personal.portfolio.replace('🌐 ', '');
+        contactLabel = 'Portfolio URL';
+        break;
+      case 'all':
+        clipboardData = `Email: ${resumeData.personal.email.replace('📧 ', '')}\nPhone: ${resumeData.personal.phone.replace('📱 ', '')}\nLinkedIn: ${resumeData.personal.linkedin.replace('🔗 ', '')}\nGitHub: ${resumeData.personal.github.replace('🐙 ', '')}\nPortfolio: ${resumeData.personal.portfolio.replace('🌐 ', '')}`;
+        contactLabel = 'All contact information';
+        break;
+    }
+    
+    try {
+      await clipboardy.write(clipboardData);
+      console.log(chalk.greenBright(`\n✅ ${contactLabel} copied to clipboard!`));
+      console.log(chalk.dim(`Copied: ${clipboardData.split('\n')[0]}${clipboardData.includes('\n') ? '...' : ''}\n`));
+    } catch (error) {
+      console.error(chalk.red(`Error copying to clipboard: ${error.message}`));
+    }
+    
+    // Ask if user wants to copy something else
+    const { continueCopy } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'continueCopy',
+        message: 'Would you like to copy something else?',
+        default: true
+      }
+    ]);
+    
+    if (!continueCopy) break;
+  }
+}
+
+// Export resume in different formats
+async function exportResume() {
+  const { format } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'format',
+      message: 'Which format would you like to export?',
+      choices: [
+        { name: '🎨 Colored (Terminal)', value: 'colored' },
+        { name: '📝 Plain Text', value: 'plain' },
+        { name: '📊 JSON', value: 'json' }
+      ]
+    }
+  ]);
+  
+  const { filename } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'filename',
+      message: 'Enter filename (without extension):',
+      default: 'bharathkumar-resume'
+    }
+  ]);
+  
+  const extensions = { colored: 'txt', plain: 'txt', json: 'json' };
+  const fullFilename = `${filename}.${extensions[format]}`;
+  
+  let output;
+  switch (format) {
+    case 'json':
+      output = formatJsonResume();
+      break;
+    case 'plain':
+      output = formatPlainResume();
+      break;
+    case 'colored':
+    default:
+      output = formatColoredResume();
+      break;
+  }
+  
+  try {
+    fs.writeFileSync(fullFilename, output);
+    console.log(chalk.greenBright(`\n✅ Resume exported to ${fullFilename}!\n`));
+  } catch (error) {
+    console.error(chalk.red(`Error exporting resume: ${error.message}`));
+  }
+}
 
 program.parse();
