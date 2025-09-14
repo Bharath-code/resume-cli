@@ -1,0 +1,190 @@
+# Fast validation workflow for pull requests
+# Provides quick feedback on code quality and basic tests
+
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+    types: [ opened, synchronize, reopened ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Quick validation checks
+  validate:
+    name: Quick Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check for merge conflicts
+        run: |
+          if git merge-tree $(git merge-base HEAD origin/${{ github.base_ref }}) HEAD origin/${{ github.base_ref }} | grep -q '<<<<<<< '; then
+            echo "❌ Merge conflicts detected"
+            exit 1
+          else
+            echo "✅ No merge conflicts"
+          fi
+      
+      - name: Validate package.json
+        run: |
+          npm pkg fix
+          if ! git diff --quiet package.json; then
+            echo "❌ package.json needs fixing"
+            git diff package.json
+            exit 1
+          fi
+      
+      - name: Check dependencies
+        run: |
+          npm outdated || true
+          npm audit --audit-level=high
+      
+      - name: Lint code
+        run: npm run lint
+      
+      - name: Check formatting
+        run: npm run format:check
+      
+      - name: Type check
+        run: npx tsc --noEmit
+      
+      - name: Build project
+        run: npm run build
+      
+      - name: Run fast tests
+        run: npm run test:unit
+      
+      - name: Test CLI basic functionality
+        run: |
+          node dist/cli.js --help
+          node dist/cli.js --version
+
+  # Code quality analysis
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run quality checks
+        run: npm run quality
+      
+      - name: Check for TODO/FIXME comments
+        run: |
+          if grep -r "TODO\|FIXME\|XXX\|HACK" src/ --include="*.ts" --include="*.js"; then
+            echo "⚠️ Found TODO/FIXME comments - consider addressing them"
+          else
+            echo "✅ No TODO/FIXME comments found"
+          fi
+      
+      - name: Check file sizes
+        run: |
+          find src/ -name "*.ts" -size +50k -exec echo "⚠️ Large file: {}" \;
+          find src/ -name "*.js" -size +50k -exec echo "⚠️ Large file: {}" \;
+      
+      - name: Analyze bundle size impact
+        run: |
+          npm run build
+          du -sh dist/
+          echo "📦 Build size: $(du -sh dist/ | cut -f1)"
+
+  # Comment on PR with results
+  comment:
+    name: PR Comment
+    runs-on: ubuntu-latest
+    needs: [validate, quality]
+    if: always() && github.event_name == 'pull_request'
+    
+    steps:
+      - name: Comment PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && comment.body.includes('🤖 PR Validation Results')
+            );
+            
+            const validateResult = '${{ needs.validate.result }}';
+            const qualityResult = '${{ needs.quality.result }}';
+            
+            let status = '✅ All checks passed!';
+            if (validateResult === 'failure' || qualityResult === 'failure') {
+              status = '❌ Some checks failed';
+            } else if (validateResult === 'cancelled' || qualityResult === 'cancelled') {
+              status = '⏹️ Checks were cancelled';
+            }
+            
+            const body = `🤖 **PR Validation Results**
+            
+            ${status}
+            
+            | Check | Status |
+            |-------|--------|
+            | Validation | ${validateResult === 'success' ? '✅' : validateResult === 'failure' ? '❌' : '⏹️'} ${validateResult} |
+            | Quality | ${qualityResult === 'success' ? '✅' : qualityResult === 'failure' ? '❌' : '⏹️'} ${qualityResult} |
+            
+            <details>
+            <summary>📋 Validation Details</summary>
+            
+            - Code linting and formatting
+            - TypeScript compilation
+            - Basic functionality tests
+            - Package validation
+            - Security audit
+            
+            </details>
+            
+            ---
+            *This comment will be updated automatically on new commits.*`;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }

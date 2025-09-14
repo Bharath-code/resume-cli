@@ -1,0 +1,244 @@
+# Automated dependency updates and security monitoring
+# Runs weekly to check for updates and security vulnerabilities
+
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allow manual triggering
+  push:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+
+jobs:
+  # Check for dependency updates
+  update-dependencies:
+    name: Check Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check for outdated packages
+        run: |
+          echo "📦 Checking for outdated packages..."
+          npm outdated --json > outdated.json || true
+          if [ -s outdated.json ]; then
+            echo "Found outdated packages:"
+            cat outdated.json | jq .
+          else
+            echo "✅ All packages are up to date!"
+          fi
+      
+      - name: Check for security vulnerabilities
+        run: |
+          echo "🔒 Running security audit..."
+          npm audit --json > audit.json || true
+          if [ -s audit.json ]; then
+            VULNERABILITIES=$(cat audit.json | jq '.metadata.vulnerabilities.total // 0')
+            if [ "$VULNERABILITIES" -gt 0 ]; then
+              echo "❌ Found $VULNERABILITIES vulnerabilities"
+              npm audit
+              exit 1
+            else
+              echo "✅ No security vulnerabilities found!"
+            fi
+          fi
+      
+      - name: Update patch and minor versions
+        run: |
+          echo "🔄 Updating patch and minor versions..."
+          npm update
+          
+          # Check if there are changes
+          if ! git diff --quiet package-lock.json; then
+            echo "📝 Dependencies were updated"
+            echo "DEPENDENCIES_UPDATED=true" >> $GITHUB_ENV
+          else
+            echo "✅ No updates needed"
+            echo "DEPENDENCIES_UPDATED=false" >> $GITHUB_ENV
+          fi
+      
+      - name: Run tests after updates
+        if: env.DEPENDENCIES_UPDATED == 'true'
+        run: |
+          npm run build
+          npm run test:unit
+          npm run lint
+      
+      - name: Create Pull Request for updates
+        if: env.DEPENDENCIES_UPDATED == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update dependencies'
+          title: '🔄 Automated dependency updates'
+          body: |
+            ## 🔄 Automated Dependency Updates
+            
+            This PR contains automated updates to patch and minor versions of dependencies.
+            
+            ### Changes
+            - Updated dependencies to latest patch/minor versions
+            - All tests pass with updated dependencies
+            - No breaking changes expected
+            
+            ### Verification
+            - ✅ Build successful
+            - ✅ Unit tests pass
+            - ✅ Linting passes
+            - ✅ No security vulnerabilities
+            
+            This PR was created automatically by the dependency update workflow.
+          branch: automated/dependency-updates
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
+            maintenance
+
+  # Security monitoring
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run comprehensive security audit
+        run: |
+          echo "🔒 Running comprehensive security scan..."
+          
+          # Check for known vulnerabilities
+          npm audit --audit-level=low
+          
+          # Check for license issues
+          npx license-checker --summary
+          
+          # Check for secrets in code (basic check)
+          if grep -r "password\|secret\|key\|token" src/ --include="*.ts" --include="*.js" | grep -v "// " | grep -v "\*" | grep -v "console.log"; then
+            echo "⚠️ Potential secrets found in code - please review"
+          fi
+      
+      - name: Check for malicious packages
+        run: |
+          echo "🕵️ Checking for potentially malicious packages..."
+          
+          # List all dependencies
+          npm ls --all --json > dependencies.json
+          
+          # Check for suspicious package names (basic heuristics)
+          if cat dependencies.json | jq -r '.. | objects | select(has("name")) | .name' | grep -E "(test|temp|tmp|debug|dev|admin|root|user|pass|auth|login|secret|key|token|hack|exploit|malware|virus|trojan)$"; then
+            echo "⚠️ Found packages with suspicious names - please review"
+          fi
+      
+      - name: Generate security report
+        run: |
+          echo "📊 Generating security report..."
+          
+          cat > security-report.md << EOF
+          # Security Report
+          
+          Generated on: $(date)
+          
+          ## Dependency Audit
+          \`\`\`
+          $(npm audit 2>&1 || echo "No vulnerabilities found")
+          \`\`\`
+          
+          ## License Summary
+          \`\`\`
+          $(npx license-checker --summary 2>&1 || echo "License check failed")
+          \`\`\`
+          
+          ## Package Count
+          - Total packages: $(npm ls --all --json | jq '[.. | objects | select(has("name"))] | length')
+          - Direct dependencies: $(cat package.json | jq '.dependencies | length')
+          - Dev dependencies: $(cat package.json | jq '.devDependencies | length')
+          EOF
+      
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: security-report.md
+          retention-days: 30
+
+  # Notify about critical issues
+  notify:
+    name: Notify Issues
+    runs-on: ubuntu-latest
+    needs: [update-dependencies, security-scan]
+    if: failure()
+    
+    steps:
+      - name: Create issue for critical security problems
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Critical Security Issue Detected';
+            const body = `## 🚨 Critical Security Issue
+            
+            The automated security scan has detected critical issues that require immediate attention.
+            
+            ### Details
+            - Workflow: ${{ github.workflow }}
+            - Run: ${{ github.run_id }}
+            - Triggered by: ${{ github.event_name }}
+            
+            ### Actions Required
+            1. Review the workflow logs for detailed information
+            2. Address any security vulnerabilities immediately
+            3. Update dependencies as needed
+            4. Re-run security scans to verify fixes
+            
+            ### Links
+            - [Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - [Security Policy](https://github.com/${{ github.repository }}/security/policy)
+            
+            This issue was created automatically by the dependency update workflow.`;
+            
+            // Check if similar issue already exists
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security,critical'
+            });
+            
+            const existingIssue = issues.find(issue => issue.title.includes('Critical Security Issue'));
+            
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['security', 'critical', 'automated']
+              });
+            }

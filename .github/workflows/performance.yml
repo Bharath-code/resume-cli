@@ -1,0 +1,363 @@
+# Performance monitoring and benchmarking workflow
+# Tracks CLI performance metrics and bundle size over time
+
+name: Performance Monitoring
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run weekly performance benchmarks
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+jobs:
+  # CLI Performance Benchmarks
+  cli-performance:
+    name: CLI Performance
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build project
+        run: npm run build
+      
+      - name: Benchmark CLI startup time
+        run: |
+          echo "⏱️ Benchmarking CLI startup time..."
+          
+          # Create benchmark script
+          cat > benchmark.js << 'EOF'
+          const { execSync } = require('child_process');
+          const fs = require('fs');
+          
+          const iterations = 10;
+          const results = [];
+          
+          console.log(`Running ${iterations} iterations...`);
+          
+          for (let i = 0; i < iterations; i++) {
+            const start = Date.now();
+            try {
+              execSync('node dist/cli.js --help', { stdio: 'pipe' });
+              const duration = Date.now() - start;
+              results.push(duration);
+              console.log(`Iteration ${i + 1}: ${duration}ms`);
+            } catch (error) {
+              console.error(`Iteration ${i + 1} failed:`, error.message);
+            }
+          }
+          
+          const avg = results.reduce((a, b) => a + b, 0) / results.length;
+          const min = Math.min(...results);
+          const max = Math.max(...results);
+          
+          const report = {
+            timestamp: new Date().toISOString(),
+            iterations: iterations,
+            average: Math.round(avg),
+            minimum: min,
+            maximum: max,
+            results: results
+          };
+          
+          console.log('\n📊 Performance Report:');
+          console.log(`Average: ${avg.toFixed(2)}ms`);
+          console.log(`Min: ${min}ms`);
+          console.log(`Max: ${max}ms`);
+          
+          fs.writeFileSync('performance-report.json', JSON.stringify(report, null, 2));
+          EOF
+          
+          node benchmark.js
+      
+      - name: Test different output formats performance
+        run: |
+          echo "📊 Testing output format performance..."
+          
+          formats=("colored" "plain" "json" "html")
+          
+          for format in "${formats[@]}"; do
+            echo "Testing $format format..."
+            start_time=$(date +%s%N)
+            timeout 30s node dist/cli.js --format "$format" > /dev/null 2>&1 || true
+            end_time=$(date +%s%N)
+            duration=$(( (end_time - start_time) / 1000000 ))
+            echo "$format: ${duration}ms"
+          done
+      
+      - name: Memory usage analysis
+        run: |
+          echo "🧠 Analyzing memory usage..."
+          
+          # Create memory profiling script
+          cat > memory-profile.js << 'EOF'
+          const { spawn } = require('child_process');
+          const fs = require('fs');
+          
+          function measureMemory(command, args = []) {
+            return new Promise((resolve, reject) => {
+              const child = spawn(command, args);
+              let maxMemory = 0;
+              
+              const interval = setInterval(() => {
+                try {
+                  const memInfo = fs.readFileSync(`/proc/${child.pid}/status`, 'utf8');
+                  const vmRSSMatch = memInfo.match(/VmRSS:\s+(\d+)\s+kB/);
+                  if (vmRSSMatch) {
+                    const currentMemory = parseInt(vmRSSMatch[1]);
+                    maxMemory = Math.max(maxMemory, currentMemory);
+                  }
+                } catch (error) {
+                  // Process might have ended
+                }
+              }, 10);
+              
+              child.on('close', (code) => {
+                clearInterval(interval);
+                resolve({ code, maxMemoryKB: maxMemory });
+              });
+              
+              child.on('error', reject);
+              
+              // Timeout after 30 seconds
+              setTimeout(() => {
+                child.kill();
+                clearInterval(interval);
+                resolve({ code: -1, maxMemoryKB: maxMemory, timeout: true });
+              }, 30000);
+            });
+          }
+          
+          async function runMemoryTests() {
+            const tests = [
+              { name: 'Help', args: ['--help'] },
+              { name: 'Version', args: ['--version'] },
+              { name: 'Default output', args: [] },
+              { name: 'JSON output', args: ['--format', 'json'] },
+              { name: 'Statistics', args: ['--stats'] }
+            ];
+            
+            console.log('Memory Usage Analysis:');
+            console.log('=====================');
+            
+            for (const test of tests) {
+              try {
+                const result = await measureMemory('node', ['dist/cli.js', ...test.args]);
+                console.log(`${test.name}: ${result.maxMemoryKB} KB${result.timeout ? ' (timeout)' : ''}`);
+              } catch (error) {
+                console.log(`${test.name}: Error - ${error.message}`);
+              }
+            }
+          }
+          
+          runMemoryTests();
+          EOF
+          
+          node memory-profile.js
+      
+      - name: Upload performance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-report-${{ github.sha }}
+          path: performance-report.json
+          retention-days: 90
+
+  # Bundle size analysis
+  bundle-analysis:
+    name: Bundle Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build project
+        run: npm run build
+      
+      - name: Analyze bundle size
+        run: |
+          echo "📦 Analyzing bundle size..."
+          
+          # Calculate sizes
+          TOTAL_SIZE=$(du -sb dist/ | cut -f1)
+          TOTAL_SIZE_KB=$((TOTAL_SIZE / 1024))
+          TOTAL_SIZE_MB=$((TOTAL_SIZE / 1024 / 1024))
+          
+          echo "Total bundle size: ${TOTAL_SIZE_KB} KB (${TOTAL_SIZE_MB} MB)"
+          
+          # Analyze individual files
+          echo "\n📁 File breakdown:"
+          find dist/ -type f -name "*.js" -exec du -h {} + | sort -hr
+          
+          # Check for large files
+          echo "\n⚠️ Large files (>100KB):"
+          find dist/ -type f -size +100k -exec ls -lh {} +
+          
+          # Create size report
+          cat > bundle-report.json << EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}",
+            "totalSizeBytes": ${TOTAL_SIZE},
+            "totalSizeKB": ${TOTAL_SIZE_KB},
+            "totalSizeMB": ${TOTAL_SIZE_MB},
+            "files": [
+          EOF
+          
+          # Add file details to report
+          find dist/ -type f -name "*.js" | while read file; do
+            size=$(stat -c%s "$file")
+            echo "      { \"file\": \"$file\", \"size\": $size }," >> bundle-report.json
+          done
+          
+          # Remove trailing comma and close JSON
+          sed -i '$ s/,$//' bundle-report.json
+          echo "    ]" >> bundle-report.json
+          echo "}" >> bundle-report.json
+      
+      - name: Check bundle size limits
+        run: |
+          echo "🚦 Checking bundle size limits..."
+          
+          TOTAL_SIZE_MB=$(cat bundle-report.json | jq '.totalSizeMB')
+          MAX_SIZE_MB=10
+          
+          if [ "$TOTAL_SIZE_MB" -gt "$MAX_SIZE_MB" ]; then
+            echo "❌ Bundle size (${TOTAL_SIZE_MB}MB) exceeds limit (${MAX_SIZE_MB}MB)"
+            exit 1
+          else
+            echo "✅ Bundle size (${TOTAL_SIZE_MB}MB) is within limits"
+          fi
+      
+      - name: Compare with previous build
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "📊 Comparing bundle size with base branch..."
+          
+          # This would require storing previous build data
+          # For now, just show current size
+          echo "Current build size: $(cat bundle-report.json | jq '.totalSizeKB') KB"
+          echo "Note: Size comparison with base branch requires historical data"
+      
+      - name: Upload bundle report
+        uses: actions/upload-artifact@v3
+        with:
+          name: bundle-report-${{ github.sha }}
+          path: bundle-report.json
+          retention-days: 90
+
+  # Performance regression detection
+  regression-check:
+    name: Regression Check
+    runs-on: ubuntu-latest
+    needs: [cli-performance, bundle-analysis]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Download performance reports
+        uses: actions/download-artifact@v3
+        with:
+          name: performance-report-${{ github.sha }}
+      
+      - name: Download bundle reports
+        uses: actions/download-artifact@v3
+        with:
+          name: bundle-report-${{ github.sha }}
+      
+      - name: Check for performance regressions
+        run: |
+          echo "🔍 Checking for performance regressions..."
+          
+          # Read current performance data
+          CURRENT_AVG=$(cat performance-report.json | jq '.average')
+          CURRENT_SIZE=$(cat bundle-report.json | jq '.totalSizeKB')
+          
+          echo "Current performance:"
+          echo "- Average startup time: ${CURRENT_AVG}ms"
+          echo "- Bundle size: ${CURRENT_SIZE}KB"
+          
+          # Define thresholds
+          MAX_STARTUP_TIME=2000  # 2 seconds
+          MAX_BUNDLE_SIZE=5120   # 5MB in KB
+          
+          REGRESSION_FOUND=false
+          
+          if [ "$CURRENT_AVG" -gt "$MAX_STARTUP_TIME" ]; then
+            echo "❌ Performance regression: Startup time (${CURRENT_AVG}ms) exceeds threshold (${MAX_STARTUP_TIME}ms)"
+            REGRESSION_FOUND=true
+          fi
+          
+          if [ "$CURRENT_SIZE" -gt "$MAX_BUNDLE_SIZE" ]; then
+            echo "❌ Size regression: Bundle size (${CURRENT_SIZE}KB) exceeds threshold (${MAX_BUNDLE_SIZE}KB)"
+            REGRESSION_FOUND=true
+          fi
+          
+          if [ "$REGRESSION_FOUND" = true ]; then
+            echo "\n🚨 Performance regressions detected!"
+            exit 1
+          else
+            echo "\n✅ No performance regressions detected"
+          fi
+      
+      - name: Comment on PR with performance results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            const perfData = JSON.parse(fs.readFileSync('performance-report.json', 'utf8'));
+            const bundleData = JSON.parse(fs.readFileSync('bundle-report.json', 'utf8'));
+            
+            const body = `## 📊 Performance Report
+            
+            ### CLI Performance
+            - **Average startup time**: ${perfData.average}ms
+            - **Min startup time**: ${perfData.minimum}ms
+            - **Max startup time**: ${perfData.maximum}ms
+            
+            ### Bundle Analysis
+            - **Total size**: ${bundleData.totalSizeKB} KB (${bundleData.totalSizeMB} MB)
+            - **File count**: ${bundleData.files.length}
+            
+            ### Status
+            ${perfData.average <= 2000 ? '✅' : '❌'} Startup time ${perfData.average <= 2000 ? 'within' : 'exceeds'} threshold (2000ms)
+            ${bundleData.totalSizeKB <= 5120 ? '✅' : '❌'} Bundle size ${bundleData.totalSizeKB <= 5120 ? 'within' : 'exceeds'} threshold (5MB)
+            
+            <details>
+            <summary>📈 Detailed Metrics</summary>
+            
+            \`\`\`json
+            ${JSON.stringify({performance: perfData, bundle: bundleData}, null, 2)}
+            \`\`\`
+            
+            </details>`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
