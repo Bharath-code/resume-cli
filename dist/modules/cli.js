@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadResumeData, validateSections } from './data.js';
 import { formatColoredResume, formatPlainResume, formatJsonResume, formatHtmlResume, formatPdfResume } from './formatting.js';
+import { runInteractiveMode } from './interactive.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Load package.json for version info
@@ -34,8 +35,8 @@ export function createProgram() {
 export async function handleCliAction(options) {
     // Handle interactive mode
     if (options.interactive) {
-        // TODO: Implement interactive mode
-        console.log('Interactive mode will be implemented in the next step');
+        const resumeData = loadResumeData();
+        await runInteractiveMode(resumeData);
         return;
     }
     let output;
