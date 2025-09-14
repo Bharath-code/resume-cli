@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import inquirer from "inquirer";
 import qrcode from "qrcode";
 import clipboardy from "clipboardy";
+import puppeteer from "puppeteer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -289,6 +290,358 @@ function formatJsonResume(sections = null) {
   return JSON.stringify(data, null, 2);
 }
 
+function formatHtmlResume(sections = null) {
+  const data = resumeData;
+  const selectedSections = sections || ['personal', 'profile', 'techStack', 'experience', 'projects', 'leadership', 'openSource', 'education'];
+  
+  let htmlContent = '';
+  
+  if (selectedSections.includes('personal')) {
+    htmlContent += `
+    <header class="header">
+      <h1 class="name">${data.personal.name}</h1>
+      <p class="role">${data.personal.role}</p>
+      <p class="location">${data.personal.location}</p>
+      <div class="contact">
+        <a href="mailto:${data.personal.email}">${data.personal.email}</a>
+        <span>${data.personal.phone}</span>
+        <a href="${data.personal.linkedin}" target="_blank">LinkedIn</a>
+        <a href="${data.personal.github}" target="_blank">GitHub</a>
+        <a href="${data.personal.portfolio}" target="_blank">Portfolio</a>
+      </div>
+    </header>`;
+  }
+  
+  if (selectedSections.includes('profile')) {
+    htmlContent += `
+    <section class="section">
+      <h2>Profile</h2>
+      <p class="profile-text">${data.profile}</p>
+    </section>`;
+  }
+  
+  if (selectedSections.includes('techStack')) {
+    htmlContent += `
+    <section class="section">
+      <h2>Tech Stack</h2>
+      <div class="tech-stack">
+        ${data.techStack.map(tech => `<span class="tech-item">${tech}</span>`).join('')}
+      </div>
+    </section>`;
+  }
+  
+  if (selectedSections.includes('experience')) {
+    htmlContent += `
+    <section class="section">
+      <h2>Experience</h2>
+      ${data.experience.map(exp => `
+        <div class="experience-item">
+          <div class="experience-header">
+            <h3>${exp.company}</h3>
+            <span class="dates">${exp.dates}</span>
+          </div>
+          <p class="job-title">${exp.title}</p>
+          <ul class="bullets">
+            ${exp.bullets.map(bullet => `<li>${bullet.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`).join('')}
+          </ul>
+        </div>
+      `).join('')}
+    </section>`;
+  }
+  
+  if (selectedSections.includes('projects')) {
+    htmlContent += `
+    <section class="section">
+      <h2>Key Projects</h2>
+      ${data.projects.map(project => `
+        <div class="project-item">
+          <h3>${project.name}</h3>
+          <p class="project-desc">${project.desc}</p>
+          <p class="project-tech">${project.tech}</p>
+        </div>
+      `).join('')}
+    </section>`;
+  }
+  
+  if (selectedSections.includes('leadership')) {
+    htmlContent += `
+    <section class="section">
+      <h2>Leadership & Mentoring</h2>
+      <ul class="simple-list">
+        ${data.leadership.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+    </section>`;
+  }
+  
+  if (selectedSections.includes('openSource')) {
+    htmlContent += `
+    <section class="section">
+      <h2>Open-source & Community</h2>
+      <ul class="simple-list">
+        ${data.openSource.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+    </section>`;
+  }
+  
+  if (selectedSections.includes('education')) {
+    htmlContent += `
+    <section class="section">
+      <h2>Education</h2>
+      ${data.education.map(edu => `
+        <div class="education-item">
+          <h3>${edu.degree}</h3>
+          <p class="school">${edu.school} (${edu.dates})</p>
+          <ul class="simple-list">
+            ${edu.details.map(detail => `<li>${detail}</li>`).join('')}
+          </ul>
+        </div>
+      `).join('')}
+    </section>`;
+  }
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${data.personal.name} - Resume</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #fff;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 30px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .name {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    
+    .role {
+      font-size: 1.3rem;
+      color: #3498db;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    .location {
+      color: #7f8c8d;
+      margin-bottom: 20px;
+    }
+    
+    .contact {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .contact a, .contact span {
+      color: #3498db;
+      text-decoration: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      background: #ecf0f1;
+      transition: background 0.3s;
+    }
+    
+    .contact a:hover {
+      background: #3498db;
+      color: white;
+    }
+    
+    .section {
+      margin-bottom: 35px;
+    }
+    
+    .section h2 {
+      font-size: 1.5rem;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #bdc3c7;
+    }
+    
+    .profile-text {
+      font-size: 1.1rem;
+      line-height: 1.7;
+      color: #555;
+    }
+    
+    .tech-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .tech-item {
+      background: #3498db;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .experience-item, .project-item, .education-item {
+      margin-bottom: 25px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+    }
+    
+    .experience-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    
+    .experience-header h3 {
+      color: #2c3e50;
+      font-size: 1.2rem;
+    }
+    
+    .dates {
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+    
+    .job-title {
+      color: #3498db;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+    
+    .bullets, .simple-list {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .bullets li, .simple-list li {
+      margin-bottom: 8px;
+      padding-left: 20px;
+      position: relative;
+    }
+    
+    .bullets li:before {
+      content: '▸';
+      color: #3498db;
+      position: absolute;
+      left: 0;
+    }
+    
+    .simple-list li:before {
+      content: '•';
+      color: #3498db;
+      position: absolute;
+      left: 0;
+    }
+    
+    .project-item h3, .education-item h3 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    
+    .project-desc {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+    
+    .project-tech {
+      color: #7f8c8d;
+      font-style: italic;
+    }
+    
+    .school {
+      color: #3498db;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    
+    @media (max-width: 600px) {
+      .contact {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .experience-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .name {
+        font-size: 2rem;
+      }
+    }
+    
+    @media print {
+      body {
+        padding: 20px;
+      }
+      
+      .contact a {
+        color: #333 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  ${htmlContent}
+</body>
+</html>`;
+}
+
+async function formatPdfResume(sections = null) {
+  const htmlContent = formatHtmlResume(sections);
+  
+  try {
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '20mm',
+        right: '15mm',
+        bottom: '20mm',
+        left: '15mm'
+      }
+    });
+    
+    await browser.close();
+    return pdfBuffer;
+  } catch (error) {
+    throw new Error(`PDF generation failed: ${error.message}`);
+  }
+}
+
 // Command line interface
 const program = new Command();
 
@@ -298,7 +651,7 @@ program
   .version(packageJson.version);
 
 program
-  .option('-f, --format <type>', 'output format (colored, plain, json)', 'colored')
+  .option('-f, --format <type>', 'output format (colored, plain, json, html, pdf)', 'colored')
   .option('-s, --section <sections...>', 'specific sections to display (personal, profile, techStack, experience, projects, leadership, openSource, education)')
   .option('-o, --output <file>', 'save resume to file')
   .option('-i, --interactive', 'enable interactive navigation mode')
@@ -310,6 +663,7 @@ program
     }
     
     let output;
+    let isBuffer = false;
     const sections = options.section;
     
     // Validate sections if provided
@@ -331,6 +685,18 @@ program
       case 'plain':
         output = formatPlainResume(sections);
         break;
+      case 'html':
+        output = formatHtmlResume(sections);
+        break;
+      case 'pdf':
+        try {
+          output = await formatPdfResume(sections);
+          isBuffer = true;
+        } catch (error) {
+          console.error(`Error generating PDF: ${error.message}`);
+          process.exit(1);
+        }
+        break;
       case 'colored':
       default:
         output = formatColoredResume(sections);
@@ -340,14 +706,22 @@ program
     // Output to file or console
     if (options.output) {
       try {
-        fs.writeFileSync(options.output, output);
+        if (isBuffer) {
+          fs.writeFileSync(options.output, output);
+        } else {
+          fs.writeFileSync(options.output, output, 'utf8');
+        }
         console.log(`Resume saved to ${options.output}`);
       } catch (error) {
         console.error(`Error writing to file: ${error.message}`);
         process.exit(1);
       }
     } else {
-      console.log(output);
+      if (isBuffer) {
+        console.log('PDF format requires an output file. Use -o option to specify output file.');
+      } else {
+        console.log(output);
+      }
     }
   });
 
@@ -605,7 +979,9 @@ async function exportResume() {
       choices: [
         { name: '🎨 Colored (Terminal)', value: 'colored' },
         { name: '📝 Plain Text', value: 'plain' },
-        { name: '📊 JSON', value: 'json' }
+        { name: '📊 JSON', value: 'json' },
+        { name: '🌐 HTML (Web)', value: 'html' },
+        { name: '📄 PDF (Print)', value: 'pdf' }
       ]
     }
   ]);
@@ -619,28 +995,49 @@ async function exportResume() {
     }
   ]);
   
-  const extensions = { colored: 'txt', plain: 'txt', json: 'json' };
+  const extensions = { colored: 'txt', plain: 'txt', json: 'json', html: 'html', pdf: 'pdf' };
   const fullFilename = `${filename}.${extensions[format]}`;
   
   let output;
-  switch (format) {
-    case 'json':
-      output = formatJsonResume();
-      break;
-    case 'plain':
-      output = formatPlainResume();
-      break;
-    case 'colored':
-    default:
-      output = formatColoredResume();
-      break;
-  }
+  let isBuffer = false;
   
   try {
-    fs.writeFileSync(fullFilename, output);
+    switch (format) {
+      case 'json':
+        output = formatJsonResume();
+        break;
+      case 'plain':
+        output = formatPlainResume();
+        break;
+      case 'html':
+        output = formatHtmlResume();
+        break;
+      case 'pdf':
+        console.log(chalk.yellowBright('\n⏳ Generating PDF... This may take a moment.'));
+        output = await formatPdfResume();
+        isBuffer = true;
+        break;
+      case 'colored':
+      default:
+        output = formatColoredResume();
+        break;
+    }
+    
+    if (isBuffer) {
+      fs.writeFileSync(fullFilename, output);
+    } else {
+      fs.writeFileSync(fullFilename, output, 'utf8');
+    }
+    
     console.log(chalk.greenBright(`\n✅ Resume exported to ${fullFilename}!\n`));
+    
+    if (format === 'html') {
+      console.log(chalk.cyanBright('💡 Tip: Open the HTML file in your browser to view the styled resume.\n'));
+    } else if (format === 'pdf') {
+      console.log(chalk.cyanBright('💡 Tip: The PDF is ready for printing or sharing professionally.\n'));
+    }
   } catch (error) {
-    console.error(chalk.red(`Error exporting resume: ${error.message}`));
+    console.error(chalk.red(`\nError exporting resume: ${error.message}\n`));
   }
 }
 

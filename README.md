@@ -26,6 +26,8 @@ npx bharathkumar-palanisamy  --help
 npx bharathkumar-palanisamy  --version
 npx bharathkumar-palanisamy --section personal experience
 npx bharathkumar-palanisamy --format plain --output my-resume.txt
+npx bharathkumar-palanisamy --format html --output resume.html
+npx bharathkumar-palanisamy --format pdf --output resume.pdf
 ```
 ## Local testing
 

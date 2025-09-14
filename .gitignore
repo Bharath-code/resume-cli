@@ -9,3 +9,20 @@ node_modules/
 .augment/rules/byterover-rules.md
 CLAUDE.md
 project_rules.md
+
+# Build artifacts (keep dist/ for npm publishing)
+*.tsbuildinfo
+
+# Environment and IDE files
+.env
+.env.local
+.DS_Store
+*.log
+
+# Development files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp

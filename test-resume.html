@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bharathkumar Palanisamy - Resume</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #fff;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 30px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .name {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    
+    .role {
+      font-size: 1.3rem;
+      color: #3498db;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    .location {
+      color: #7f8c8d;
+      margin-bottom: 20px;
+    }
+    
+    .contact {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .contact a, .contact span {
+      color: #3498db;
+      text-decoration: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      background: #ecf0f1;
+      transition: background 0.3s;
+    }
+    
+    .contact a:hover {
+      background: #3498db;
+      color: white;
+    }
+    
+    .section {
+      margin-bottom: 35px;
+    }
+    
+    .section h2 {
+      font-size: 1.5rem;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #bdc3c7;
+    }
+    
+    .profile-text {
+      font-size: 1.1rem;
+      line-height: 1.7;
+      color: #555;
+    }
+    
+    .tech-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .tech-item {
+      background: #3498db;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .experience-item, .project-item, .education-item {
+      margin-bottom: 25px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+    }
+    
+    .experience-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    
+    .experience-header h3 {
+      color: #2c3e50;
+      font-size: 1.2rem;
+    }
+    
+    .dates {
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+    
+    .job-title {
+      color: #3498db;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+    
+    .bullets, .simple-list {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .bullets li, .simple-list li {
+      margin-bottom: 8px;
+      padding-left: 20px;
+      position: relative;
+    }
+    
+    .bullets li:before {
+      content: '▸';
+      color: #3498db;
+      position: absolute;
+      left: 0;
+    }
+    
+    .simple-list li:before {
+      content: '•';
+      color: #3498db;
+      position: absolute;
+      left: 0;
+    }
+    
+    .project-item h3, .education-item h3 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    
+    .project-desc {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+    
+    .project-tech {
+      color: #7f8c8d;
+      font-style: italic;
+    }
+    
+    .school {
+      color: #3498db;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    
+    @media (max-width: 600px) {
+      .contact {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .experience-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .name {
+        font-size: 2rem;
+      }
+    }
+    
+    @media print {
+      body {
+        padding: 20px;
+      }
+      
+      .contact a {
+        color: #333 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+    <header class="header">
+      <h1 class="name">Bharathkumar Palanisamy</h1>
+      <p class="role">Full-Stack Engineer (JavaScript / Node.js & React)</p>
+      <p class="location">Bengaluru, India</p>
+      <div class="contact">
+        <a href="mailto:kumarbharath63@icloud.com">kumarbharath63@icloud.com</a>
+        <span>+91 8667861408</span>
+        <a href="https://linkedin.com/in/bharathkumar-palanisamy" target="_blank">LinkedIn</a>
+        <a href="https://github.com/Bharath-code/" target="_blank">GitHub</a>
+        <a href="https://bharathkumar.dev" target="_blank">Portfolio</a>
+      </div>
+    </header>
+    <section class="section">
+      <h2>Profile</h2>
+      <p class="profile-text">Full-Stack Engineer with 5 years of professional experience across the JavaScript ecosystem. I build end-to-end web applications and production APIs using Node.js, Express, React/Next.js and modern databases. I took a planned career break to focus on personal priorities while actively upskilling — building personal projects, contributing to open source, and staying current with modern tooling. Now actively seeking to re-enter the workforce and contribute as a focused, production-minded engineer.</p>
+    </section>
+    <section class="section">
+      <h2>Tech Stack</h2>
+      <div class="tech-stack">
+        <span class="tech-item">Node.js</span><span class="tech-item">Express</span><span class="tech-item">TypeScript</span><span class="tech-item">Sveltekit</span><span class="tech-item">React</span><span class="tech-item">Next.js</span><span class="tech-item">Astro</span><span class="tech-item">Tailwind</span><span class="tech-item">shadcnUI</span><span class="tech-item">Postgres</span><span class="tech-item">MongoDB</span><span class="tech-item">Redis</span><span class="tech-item">Docker</span><span class="tech-item">Kubernetes</span><span class="tech-item">GraphQL</span><span class="tech-item">REST</span><span class="tech-item">GitHub Actions</span><span class="tech-item">AWS</span>
+      </div>
+    </section>
+    <section class="section">
+      <h2>Experience</h2>
+      
+        <div class="experience-item">
+          <div class="experience-header">
+            <h3>Accenture</h3>
+            <span class="dates">2019 — 2021</span>
+          </div>
+          <p class="job-title">Full-Stack Engineer</p>
+          <ul class="bullets">
+            <li>Built an enterprise-level <strong>Code Scan Platform</strong> from scratch that identified vulnerabilities in large-scale applications and suggested potential fixes.</li><li>Designed and implemented secure, scalable REST APIs with <strong>Node.js, Express, and MongoDB</strong> to handle high-volume scan data.</li><li>Developed <strong>pixel-perfect frontends</strong> by converting Figma designs into responsive React + Redux dashboards, ensuring design consistency and accessibility.</li><li>Integrated CI/CD pipelines using <strong>GitHub Actions and Docker</strong>, reducing deployment times by 60% and minimizing production errors.</li><li>Collaborated with product managers, security teams, and designers to deliver a compliant and enterprise-ready product.</li>
+          </ul>
+        </div>
+      
+        <div class="experience-item">
+          <div class="experience-header">
+            <h3>Infosys</h3>
+            <span class="dates">2015 — 2019</span>
+          </div>
+          <p class="job-title">Full-Stack Engineer</p>
+          <ul class="bullets">
+            <li>Worked with <strong>major national banks</strong> to design and deliver secure, high-performance features for customer-facing applications.</li><li>Developed backend services in <strong>Node.js/Express with PostgreSQL</strong>, optimized queries, and introduced <strong>Redis caching</strong> to improve performance by 40%.</li><li>Implemented <strong>authentication flows (JWT, OAuth2)</strong> and role-based access to meet banking compliance and security standards.</li><li>Converted business requirements and <strong>Figma wireframes into production-grade UIs</strong> using React, HTML5, and CSS3.</li><li>Collaborated in Agile sprints with QA and frontend teams to deliver new banking modules within strict deadlines.</li>
+          </ul>
+        </div>
+      
+    </section>
+    <section class="section">
+      <h2>Key Projects</h2>
+      
+        <div class="project-item">
+          <h3>Task & Reminder App (Personal)</h3>
+          <p class="project-desc">Full-stack productivity app with grouping, reminders, and AI-generated subtasks to help focus and complete work.</p>
+          <p class="project-tech">Next.js • Node.js • MongoDB • TailwindCSS • Vercel</p>
+        </div>
+      
+        <div class="project-item">
+          <h3>Tab Focus Chrome Extension</h3>
+          <p class="project-desc">Chrome extension to manage open tabs by encouraging focus and closing unused tabs (Manifest V3).</p>
+          <p class="project-tech">JavaScript • Chrome Extension APIs</p>
+        </div>
+      
+        <div class="project-item">
+          <h3>Portfolio & Blog</h3>
+          <p class="project-desc">Personal portfolio built to showcase projects and write technical posts about modern JS tooling.</p>
+          <p class="project-tech">SvelteKit • Vercel • Markdown</p>
+        </div>
+      
+    </section>
+    <section class="section">
+      <h2>Leadership & Mentoring</h2>
+      <ul class="simple-list">
+        <li>Mentored junior developers and reviewed PRs to improve code quality.</li><li>Collaborated cross-functionally with QA and designers to ship polished features.</li>
+      </ul>
+    </section>
+    <section class="section">
+      <h2>Open-source & Community</h2>
+      <ul class="simple-list">
+        <li>Small npm package published for internal CI helpers.</li><li>Contributed documentation fixes and small patches to open-source JavaScript libraries.</li>
+      </ul>
+    </section>
+    <section class="section">
+      <h2>Education</h2>
+      
+        <div class="education-item">
+          <h3>B.E in Electrical and Electronics</h3>
+          <p class="school">Sri Krishna College of Engineering and Technology (2011 – 2015)</p>
+          <ul class="simple-list">
+            <li>Graduated with First Class Honours</li>
+          </ul>
+        </div>
+      
+    </section>
+</body>
+</html>
