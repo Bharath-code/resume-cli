@@ -1,6 +1,6 @@
 {
   "name": "bharathkumar-palanisamy",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "CLI Resume of Bharathkumar Palanisamy — prints to terminal with npx bharathkumar-palanisamy",
   "bin": "./dist/cli.js",
   "author": "Bharathkumar Palanisamy <kumarbharath63@icloud.com>",
