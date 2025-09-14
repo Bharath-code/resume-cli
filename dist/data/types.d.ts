@@ -36,7 +36,7 @@ export interface ResumeData {
     education: Education[];
 }
 export type SectionKey = keyof ResumeData;
-export type OutputFormat = 'colored' | 'plain' | 'json' | 'html' | 'pdf';
+export type OutputFormat = 'colored' | 'plain' | 'json' | 'html' | 'pdf' | 'markdown' | 'latex' | 'linkedin' | 'twitter';
 export interface FormatOptions {
     format: OutputFormat;
     sections?: SectionKey[];
@@ -83,5 +83,19 @@ export interface ResumeStats {
     techStackSize: number;
     totalCompanies: number;
     educationCount: number;
+}
+export interface TemplateConfig {
+    name: string;
+    format: OutputFormat;
+    sections: SectionKey[];
+    style?: 'academic' | 'professional' | 'creative' | 'minimal';
+    industry?: string;
+}
+export interface ExportOptions {
+    format: OutputFormat;
+    template?: TemplateConfig;
+    customSections?: SectionKey[];
+    includeContact?: boolean;
+    maxLength?: number;
 }
 //# sourceMappingURL=types.d.ts.map

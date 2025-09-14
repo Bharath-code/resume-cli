@@ -3,8 +3,9 @@ import inquirer from 'inquirer';
 import qrcode from 'qrcode';
 import clipboardy from 'clipboardy';
 import fs from 'fs';
-import { ResumeData, SectionKey, UserConfig, SearchResult } from '../data/types.js';
+import { ResumeData, SectionKey, UserConfig, SearchResult, ExportOptions, TemplateConfig } from '../data/types.js';
 import { formatColoredResume, formatPlainResume, formatJsonResume, formatHtmlResume, formatPdfResume } from './formatting.js';
+import { exportResume as exportResumeWithOptions, getAvailableTemplates, getTemplateByName } from './export.js';
 import { validateSections } from './data.js';
 import { loadConfig, saveConfig, addToFavorites, removeFromFavorites, getThemeColors } from './config.js';
 import { searchResume, getSearchSuggestions, groupResultsBySection } from './search.js';
@@ -492,6 +493,37 @@ export async function copyToClipboard(resumeData: ResumeData): Promise<void> {
  * Export resume in different formats
  */
 export async function exportResume(resumeData: ResumeData): Promise<void> {
+  const { exportType } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'exportType',
+      message: 'How would you like to export your resume?',
+      choices: [
+        { name: '📋 Quick Export (Standard Formats)', value: 'quick' },
+        { name: '🎯 Template-based Export (Industry Specific)', value: 'template' },
+        { name: '📱 Social Media Formats', value: 'social' },
+        { name: '🔧 Custom Export', value: 'custom' }
+      ]
+    }
+  ]);
+
+  switch (exportType) {
+    case 'quick':
+      await quickExport(resumeData);
+      break;
+    case 'template':
+      await templateBasedExport(resumeData);
+      break;
+    case 'social':
+      await socialMediaExport(resumeData);
+      break;
+    case 'custom':
+      await customExport(resumeData);
+      break;
+  }
+}
+
+async function quickExport(resumeData: ResumeData): Promise<void> {
   const { format } = await inquirer.prompt([
     {
       type: 'list',
@@ -502,11 +534,198 @@ export async function exportResume(resumeData: ResumeData): Promise<void> {
         { name: '📝 Plain Text', value: 'plain' },
         { name: '📊 JSON', value: 'json' },
         { name: '🌐 HTML (Web)', value: 'html' },
-        { name: '📄 PDF (Print)', value: 'pdf' }
+        { name: '📄 PDF (Print)', value: 'pdf' },
+        { name: '📋 Markdown (GitHub)', value: 'markdown' },
+        { name: '📚 LaTeX (Academic)', value: 'latex' }
       ]
     }
   ]);
-  
+
+  await performExport(resumeData, format);
+}
+
+async function templateBasedExport(resumeData: ResumeData): Promise<void> {
+  const templates = getAvailableTemplates();
+  const templateChoices = templates.map(template => ({
+    name: `${template.name} (${template.format.toUpperCase()}) - ${template.style || 'default'} style`,
+    value: template.name,
+    short: template.name
+  }));
+
+  const { templateName } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'templateName',
+      message: 'Choose a template:',
+      choices: templateChoices
+    }
+  ]);
+
+  const template = getTemplateByName(templateName);
+  if (!template) {
+    console.error(chalk.red('Template not found!'));
+    return;
+  }
+
+  console.log(chalk.cyan(`\n📋 Template: ${template.name}`));
+  console.log(chalk.gray(`   Format: ${template.format.toUpperCase()}`));
+  console.log(chalk.gray(`   Style: ${template.style || 'default'}`));
+  console.log(chalk.gray(`   Sections: ${template.sections.join(', ')}`));
+  if (template.industry) {
+    console.log(chalk.gray(`   Industry: ${template.industry}`));
+  }
+
+  const { filename } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'filename',
+      message: 'Enter filename (without extension):',
+      default: `bharathkumar-resume-${template.name.toLowerCase().replace(/\s+/g, '-')}`
+    }
+  ]);
+
+  const exportOptions: ExportOptions = {
+    format: template.format,
+    template,
+    includeContact: true
+  };
+
+  await performTemplateExport(resumeData, exportOptions, filename);
+}
+
+async function socialMediaExport(resumeData: ResumeData): Promise<void> {
+  const { platform } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'platform',
+      message: 'Which social media platform?',
+      choices: [
+        { name: '💼 LinkedIn Summary (2000 chars)', value: 'linkedin' },
+        { name: '🐦 Twitter Bio (160 chars)', value: 'twitter' }
+      ]
+    }
+  ]);
+
+  const maxLength = platform === 'linkedin' ? 2000 : 160;
+  const exportOptions: ExportOptions = {
+    format: platform,
+    maxLength,
+    includeContact: platform === 'linkedin'
+  };
+
+  try {
+    const output = exportResumeWithOptions(resumeData, exportOptions);
+    
+    console.log(chalk.cyan(`\n📱 ${platform.toUpperCase()} Export:`));
+    console.log(chalk.gray('─'.repeat(50)));
+    console.log(output);
+    console.log(chalk.gray('─'.repeat(50)));
+    console.log(chalk.yellow(`Character count: ${output.length}/${maxLength}`));
+    
+    const { action } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: 'What would you like to do?',
+        choices: [
+          { name: '📋 Copy to Clipboard', value: 'copy' },
+          { name: '💾 Save to File', value: 'save' },
+          { name: '↩️  Back to Menu', value: 'back' }
+        ]
+      }
+    ]);
+
+    if (action === 'copy') {
+      await clipboardy.write(output);
+      console.log(chalk.green('✅ Copied to clipboard!'));
+    } else if (action === 'save') {
+      const { filename } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'filename',
+          message: 'Enter filename:',
+          default: `bharathkumar-${platform}-bio.txt`
+        }
+      ]);
+      fs.writeFileSync(filename, output, 'utf8');
+      console.log(chalk.green(`✅ Saved to ${filename}!`));
+    }
+  } catch (error: any) {
+    console.error(chalk.red(`Error generating ${platform} export: ${error.message}`));
+  }
+}
+
+async function customExport(resumeData: ResumeData): Promise<void> {
+  const { format } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'format',
+      message: 'Choose export format:',
+      choices: [
+        { name: '📋 Markdown', value: 'markdown' },
+        { name: '📚 LaTeX', value: 'latex' },
+        { name: '💼 LinkedIn', value: 'linkedin' },
+        { name: '🐦 Twitter', value: 'twitter' }
+      ]
+    }
+  ]);
+
+  const allSections: SectionKey[] = ['personal', 'profile', 'techStack', 'experience', 'projects', 'leadership', 'openSource', 'education'];
+  const { sections } = await inquirer.prompt([
+    {
+      type: 'checkbox',
+      name: 'sections',
+      message: 'Select sections to include:',
+      choices: allSections.map(section => ({ name: section, value: section, checked: true }))
+    }
+  ]);
+
+  const { includeContact } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'includeContact',
+      message: 'Include contact information?',
+      default: true
+    }
+  ]);
+
+  let maxLength: number | undefined;
+  if (format === 'linkedin' || format === 'twitter') {
+    const { customLength } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'customLength',
+        message: `Maximum character length (default: ${format === 'linkedin' ? '2000' : '160'}):`,
+        default: format === 'linkedin' ? '2000' : '160',
+        validate: (input: string) => {
+          const num = parseInt(input);
+          return !isNaN(num) && num > 0 ? true : 'Please enter a valid positive number';
+        }
+      }
+    ]);
+    maxLength = parseInt(customLength);
+  }
+
+  const exportOptions: ExportOptions = {
+    format,
+    customSections: sections,
+    includeContact,
+    maxLength
+  };
+
+  const { filename } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'filename',
+      message: 'Enter filename (without extension):',
+      default: `bharathkumar-resume-custom`
+    }
+  ]);
+
+  await performTemplateExport(resumeData, exportOptions, filename);
+}
+
+async function performExport(resumeData: ResumeData, format: string): Promise<void> {
   const { filename } = await inquirer.prompt([
     {
       type: 'input',
@@ -521,7 +740,9 @@ export async function exportResume(resumeData: ResumeData): Promise<void> {
     plain: 'txt', 
     json: 'json', 
     html: 'html', 
-    pdf: 'pdf' 
+    pdf: 'pdf',
+    markdown: 'md',
+    latex: 'tex'
   };
   const fullFilename = `${filename}.${extensions[format]}`;
   
@@ -529,25 +750,33 @@ export async function exportResume(resumeData: ResumeData): Promise<void> {
   let isBuffer = false;
   
   try {
-    switch (format) {
-      case 'json':
-        output = formatJsonResume(resumeData);
-        break;
-      case 'plain':
-        output = formatPlainResume(resumeData);
-        break;
-      case 'html':
-        output = formatHtmlResume(resumeData);
-        break;
-      case 'pdf':
-        console.log(chalk.yellowBright('\n⏳ Generating PDF... This may take a moment.'));
-        output = await formatPdfResume(resumeData);
-        isBuffer = true;
-        break;
-      case 'colored':
-      default:
-        output = formatColoredResume(resumeData);
-        break;
+    if (['markdown', 'latex'].includes(format)) {
+      const exportOptions: ExportOptions = {
+        format: format as any,
+        includeContact: true
+      };
+      output = exportResumeWithOptions(resumeData, exportOptions);
+    } else {
+      switch (format) {
+        case 'json':
+          output = formatJsonResume(resumeData);
+          break;
+        case 'plain':
+          output = formatPlainResume(resumeData);
+          break;
+        case 'html':
+          output = formatHtmlResume(resumeData);
+          break;
+        case 'pdf':
+          console.log(chalk.yellowBright('\n⏳ Generating PDF... This may take a moment.'));
+          output = await formatPdfResume(resumeData);
+          isBuffer = true;
+          break;
+        case 'colored':
+        default:
+          output = formatColoredResume(resumeData);
+          break;
+      }
     }
     
     if (isBuffer) {
@@ -557,6 +786,31 @@ export async function exportResume(resumeData: ResumeData): Promise<void> {
     }
     
     console.log(chalk.greenBright(`\n✅ Resume exported successfully to ${fullFilename}!\n`));
+    
+  } catch (error: any) {
+    console.error(chalk.red(`Error exporting resume: ${error.message}`));
+  }
+}
+
+async function performTemplateExport(resumeData: ResumeData, exportOptions: ExportOptions, filename: string): Promise<void> {
+  const extensions: Record<string, string> = {
+    markdown: 'md',
+    latex: 'tex',
+    linkedin: 'txt',
+    twitter: 'txt'
+  };
+  
+  const fullFilename = `${filename}.${extensions[exportOptions.format]}`;
+  
+  try {
+    const output = exportResumeWithOptions(resumeData, exportOptions);
+    fs.writeFileSync(fullFilename, output, 'utf8');
+    
+    console.log(chalk.greenBright(`\n✅ Resume exported successfully to ${fullFilename}!`));
+    
+    if (exportOptions.format === 'latex') {
+      console.log(chalk.yellow('💡 Tip: Compile the .tex file with pdflatex to generate a PDF.'));
+    }
     
   } catch (error: any) {
     console.error(chalk.red(`Error exporting resume: ${error.message}`));
