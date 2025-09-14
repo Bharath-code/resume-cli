@@ -15,11 +15,11 @@ const title = chalk.bold.hex("#ff6b6b")("Bharathkumar Palanisamy");
 const role = chalk.bold("Full-Stack Engineer (JavaScript / Node.js & React)");
 const location = chalk.green("Bengaluru, India");
 
-const email = chalk.cyan("bharath@example.com");
-const phone = chalk.yellow("+91 9XXXXXXXXX");
+const email = chalk.cyan("kumarbharath63@icloud.com");
+const phone = chalk.yellow("+91 8667861408");
 const linkedin = chalk.blue("https://linkedin.com/in/bharathkumar-palanisamy");
-const github = chalk.blue("https://github.com/your-github");
-const portfolio = chalk.underline("https://your-portfolio.example.com");
+const github = chalk.blue("https://github.com/Bharath-code/");
+const portfolio = chalk.underline("https://bharathkumar.dev");
 
 /* Tech stack */
 const techStack = [
@@ -99,12 +99,11 @@ const openSource = [
 /* Education (bright, no dim) */
 const education = [
   {
-    degree: "B.Tech in Computer Science",
-    school: "Example University",
-    dates: "2012 – 2016",
+    degree: "B.E in Electrical and Electronics",
+    school: "Sri Krishna College of Engineering and Technology",
+    dates: "2011 – 2015",
     details: [
       "Graduated with First Class Honours",
-      "Relevant coursework: Databases, Web Development, Operating Systems"
     ]
   }
 ];
