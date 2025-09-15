@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { ThemeEngine } from '../modules/theme-engine';
-import { ColorPaletteGenerator } from '../modules/color-generator';
-import { FontManager } from '../modules/font-manager';
+import { ThemeEngine } from '../modules/theming/theme-engine.js';
+import { ColorPaletteGenerator } from '../modules/theming/color-generator.js';
+import { FontManager } from '../modules/theming/font-manager.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { runCli } from './modules/cli.js';
+import { runCli } from './modules/core/cli.js';
 // Run the CLI application
 runCli();
 //# sourceMappingURL=cli.js.map

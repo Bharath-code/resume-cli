@@ -1,10 +1,10 @@
 import { Command } from 'commander';
-import { ThemeEngine } from '../modules/theme-engine';
-import { ColorPaletteGenerator } from '../modules/color-generator';
-import { FontManager } from '../modules/font-manager';
-import { BrandKitManager } from '../modules/brand-kit';
-import { ThemeModeManager } from '../modules/theme-mode';
-import { ResumeTheme, ColorSchemeRequest, BrandKit, Industry } from '../data/theme-types';
+import { ThemeEngine } from '../modules/theming/theme-engine.js';
+import { ColorPaletteGenerator } from '../modules/theming/color-generator.js';
+import { FontManager } from '../modules/theming/font-manager.js';
+import { BrandKitManager } from '../modules/theming/brand-kit.js';
+import { ThemeModeManager } from '../modules/theming/theme-mode.js';
+import { ResumeTheme, ColorSchemeRequest, BrandKit, Industry } from '../data/theme-types.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
