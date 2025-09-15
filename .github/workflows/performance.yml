@@ -41,8 +41,8 @@ jobs:
           
           # Create benchmark script
           cat > benchmark.js << 'EOF'
-          const { execSync } = require('child_process');
-          const fs = require('fs');
+          import { execSync } from 'child_process';
+          import fs from 'fs';
           
           const iterations = 10;
           const results = [];
@@ -105,8 +105,8 @@ jobs:
           
           # Create memory profiling script
           cat > memory-profile.js << 'EOF'
-          const { spawn } = require('child_process');
-          const fs = require('fs');
+          import { spawn } from 'child_process';
+          import fs from 'fs';
           
           function measureMemory(command, args = []) {
             return new Promise((resolve, reject) => {
