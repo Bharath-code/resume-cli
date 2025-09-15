@@ -2,6 +2,9 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import puppeteer from 'puppeteer';
 import { ResumeData, SectionKey, OutputFormat } from '../../data/types.js';
+import { ThemeEngine } from '../theming/theme-engine.js';
+import { ThemeModeManager } from '../theming/theme-mode.js';
+import { loadConfig } from '../core/config.js';
 import { 
   formatBoldText, 
   createSectionHeader, 
@@ -186,6 +189,11 @@ export function formatJsonResume(data: ResumeData, sections?: SectionKey[]): str
 export function formatHtmlResume(data: ResumeData, sections?: SectionKey[]): string {
   const selectedSections = sections || ['personal', 'profile', 'techStack', 'experience', 'projects', 'leadership', 'openSource', 'education'];
   
+  // Load user config and get current theme
+  const config = loadConfig();
+  const currentTheme = ThemeEngine.getThemeById(config.theme) || ThemeEngine.getThemeById('modern-professional');
+  const themeMode = ThemeModeManager.getCurrentMode();
+  
   let htmlContent = '';
   
   if (selectedSections.includes('personal')) {
@@ -289,6 +297,12 @@ export function formatHtmlResume(data: ResumeData, sections?: SectionKey[]): str
         </div>
       `).join('')}
     </section>`;
+  }
+  
+  // Apply theme to HTML content
+  if (currentTheme) {
+    const effectiveMode = themeMode === 'auto' ? ThemeModeManager.getEffectiveMode() : (themeMode === 'dark' ? 'dark' : 'light');
+    return ThemeEngine.applyThemeToHTML(htmlContent, currentTheme, effectiveMode);
   }
   
   return htmlContent;

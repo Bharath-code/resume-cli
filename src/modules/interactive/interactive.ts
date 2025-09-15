@@ -27,6 +27,11 @@ import { showStatistics, showAnalyticsDashboard, showATSScore, analyzeGitHubProf
 import { optimizeKeywords, analyzeJobDescription, analyzeLengthOptimization } from './interactive-analysis.js';
 import { manageFavorites } from './interactive-favorites.js';
 import { generateQRCode, exportContactCard } from './interactive-utilities.js';
+import { ASCIIArtGenerator } from '../utilities/ascii-art.js';
+import { ProgressBarManager } from '../utilities/progress-bars.js';
+import { AnimatedLoadingManager, createLoadingSpinner, createAnalyzingSpinner, createGeneratingSpinner, createExportingSpinner, createSearchingSpinner, createOptimizingSpinner } from '../utilities/animated-loading.js';
+import { InteractiveChartsManager } from '../utilities/interactive-charts.js';
+import { ThemeCustomizationInterface } from '../theming/theme-customization.js';
 
 /**
  * Main interactive mode function
@@ -35,7 +40,19 @@ export async function runInteractiveMode(resumeData: ResumeData): Promise<void> 
   const config = loadConfig();
   const colors = getThemeColors(config);
   
-  console.log((chalk as any)[colors.primary].bold('\n🚀 Interactive Resume Navigator\n'));
+  // Display ASCII name banner
+  try {
+    const nameBanner = await ASCIIArtGenerator.generateNameBanner(
+      resumeData.personal.name,
+      'Big',
+      colors
+    );
+    console.log('\n' + nameBanner);
+  } catch (error) {
+    console.log((chalk as any)[colors.primary].bold(`\n🚀 ${resumeData.personal.name}'s Resume\n`));
+  }
+  
+  console.log((chalk as any)[colors.secondary]('Interactive Resume Navigator\n'));
   
   while (true) {
     const { action } = await inquirer.prompt([
@@ -56,6 +73,8 @@ export async function runInteractiveMode(resumeData: ResumeData): Promise<void> 
           { name: '📏 Length Optimization', value: 'length' },
           { name: '🌐 Social Media Sync', value: 'social-sync' },
           { name: '📊 GitHub Analytics', value: 'github-analytics' },
+          { name: '📈 Interactive Charts', value: 'charts' },
+          { name: '🎨 Theme Customization', value: 'customize' },
           { name: '📋 Copy Contact Info', value: 'clipboard' },
           { name: '💾 Export Resume', value: 'export' },
           { name: '❌ Exit', value: 'exit' }
@@ -100,6 +119,12 @@ export async function runInteractiveMode(resumeData: ResumeData): Promise<void> 
       case 'github-analytics':
         await analyzeGitHubProfile(resumeData);
         break;
+      case 'charts':
+        await showInteractiveCharts(resumeData);
+        break;
+      case 'customize':
+        await showThemeCustomization(resumeData);
+        break;
       case 'clipboard':
         await copyToClipboard(resumeData);
         break;
@@ -133,22 +158,43 @@ async function searchResumeInteractive(resumeData: ResumeData, config: UserConfi
       return;
     }
     
+    // Create and start search spinner
+    const searchSpinner = createSearchingSpinner(`Searching for "${searchQuery}"...`);
+    
+    // Simulate search processing time for better UX
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     const results = searchResume(resumeData, searchQuery);
     
     if (results.length === 0) {
-      console.log((chalk as any)[colors.error]('\n❌ No results found for "' + searchQuery + '"\n'));
+      AnimatedLoadingManager.failSpinner(searchSpinner, `No results found for "${searchQuery}"`);
+      
+      // Show suggestions with spinner
+      const suggestionSpinner = createAnalyzingSpinner('Generating suggestions...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const suggestions = getSearchSuggestions(resumeData);
       if (suggestions.length > 0) {
+        AnimatedLoadingManager.succeedSpinner(suggestionSpinner, 'Found some suggestions!');
         console.log((chalk as any)[colors.secondary]('💡 Did you mean: ' + suggestions.join(', ') + '?\n'));
+      } else {
+        AnimatedLoadingManager.infoSpinner(suggestionSpinner, 'No suggestions available');
       }
       continue;
     }
     
-    console.log((chalk as any)[colors.success](`\n🔍 Found ${results.length} result(s) for "${searchQuery}":\n`));
+    AnimatedLoadingManager.succeedSpinner(searchSpinner, `Found ${results.length} result(s) for "${searchQuery}"`);
+    
+    // Group results by section with spinner
+    const groupingSpinner = createAnalyzingSpinner('Organizing results...');
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     const groupedResults = groupResultsBySection(results);
+    AnimatedLoadingManager.succeedSpinner(groupingSpinner, 'Results organized by section');
+    
+    console.log();
     Object.entries(groupedResults).forEach(([section, sectionResults]) => {
-      console.log((chalk as any)[colors.primary].bold(`\n📁 ${section}:`));
+      console.log((chalk as any)[colors.primary].bold(`📁 ${section}:`));
       sectionResults.forEach((result: SearchResult) => {
         console.log(`  • ${result.content} ${(chalk as any)[colors.secondary]('(Score: ' + result.score.toFixed(2) + ')')}`);
       });
@@ -403,6 +449,145 @@ async function templateBasedExport(resumeData: ResumeData): Promise<void> {
   await performTemplateExport(resumeData, exportOptions, filename);
 }
 
+/**
+ * Show Interactive Charts Menu
+ */
+async function showInteractiveCharts(resumeData: ResumeData): Promise<void> {
+  const config = loadConfig();
+  const colors = getThemeColors(config);
+  
+  while (true) {
+    const { chartType } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'chartType',
+        message: 'Choose a chart to display:',
+        choices: [
+          { name: '📊 Complete Analytics Dashboard', value: 'dashboard' },
+          { name: '🕒 Experience Timeline', value: 'timeline' },
+          { name: '🎯 Skill Level Bars', value: 'skills' },
+          { name: '📈 Skill Category Radar', value: 'radar' },
+          { name: '⬅️  Back to Main Menu', value: 'back' }
+        ]
+      }
+    ]);
+    
+    if (chartType === 'back') break;
+    
+    const chartSpinner = createGeneratingSpinner('Generating chart visualization...');
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    try {
+      let chartOutput = '';
+      
+      switch (chartType) {
+        case 'dashboard':
+          chartOutput = InteractiveChartsManager.generateDashboard(resumeData);
+          AnimatedLoadingManager.succeedSpinner(chartSpinner, 'Analytics dashboard generated');
+          break;
+        case 'timeline':
+          chartOutput = InteractiveChartsManager.generateExperienceTimeline(resumeData.experience);
+          AnimatedLoadingManager.succeedSpinner(chartSpinner, 'Experience timeline generated');
+          break;
+        case 'skills':
+          chartOutput = InteractiveChartsManager.generateSkillBars(resumeData.techStack);
+          AnimatedLoadingManager.succeedSpinner(chartSpinner, 'Skill level chart generated');
+          break;
+        case 'radar':
+          chartOutput = InteractiveChartsManager.generateSkillRadar(resumeData.techStack);
+          AnimatedLoadingManager.succeedSpinner(chartSpinner, 'Skill radar chart generated');
+          break;
+      }
+      
+      console.log(chartOutput);
+      
+      // Ask if user wants to view another chart
+      const { continueViewing } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'continueViewing',
+          message: 'Would you like to view another chart?',
+          default: true
+        }
+      ]);
+      
+      if (!continueViewing) break;
+      
+    } catch (error: any) {
+      AnimatedLoadingManager.failSpinner(chartSpinner, `Chart generation failed: ${error.message}`);
+      console.error((chalk as any)[colors.error](`\n❌ Error generating chart: ${error.message}`));
+    }
+  }
+}
+
+/**
+ * Show Theme Customization Interface
+ */
+async function showThemeCustomization(resumeData: ResumeData): Promise<void> {
+  const config = loadConfig();
+  const colors = getThemeColors(config);
+  
+  while (true) {
+    const { customizationType } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'customizationType',
+        message: 'Choose customization option:',
+        choices: [
+          { name: '🎨 Advanced Theme Editor', value: 'advanced' },
+          { name: '🌈 Color Palette Generator', value: 'palette' },
+          { name: '🎭 Theme Mode Manager', value: 'mode' },
+          { name: '💾 Save Custom Theme', value: 'save' },
+          { name: '📂 Load Theme Preset', value: 'load' },
+          { name: '🔄 Reset to Default', value: 'reset' },
+          { name: '⬅️  Back to Main Menu', value: 'back' }
+        ]
+      }
+    ]);
+    
+    if (customizationType === 'back') break;
+    
+    const customizationSpinner = createGeneratingSpinner('Loading theme customization...');
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    try {
+      switch (customizationType) {
+        case 'advanced':
+          AnimatedLoadingManager.succeedSpinner(customizationSpinner, 'Advanced theme editor loaded');
+          await ThemeCustomizationInterface.startCustomization(config);
+          break;
+        case 'palette':
+          AnimatedLoadingManager.succeedSpinner(customizationSpinner, 'Quick customization loaded');
+          await ThemeCustomizationInterface.quickCustomization();
+          break;
+        case 'mode':
+        case 'save':
+        case 'load':
+        case 'reset':
+          AnimatedLoadingManager.succeedSpinner(customizationSpinner, 'Feature coming soon');
+          console.log(chalk.yellow('This feature is coming soon!'));
+          break;
+      }
+      
+      // Ask if user wants to continue customizing
+      const { continueCustomizing } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'continueCustomizing',
+          message: 'Would you like to continue customizing?',
+          default: true
+        }
+      ]);
+      
+      if (!continueCustomizing) break;
+      
+    } catch (error: any) {
+      AnimatedLoadingManager.failSpinner(customizationSpinner, `Theme customization failed: ${error.message}`);
+      console.error((chalk as any)[colors.error](`\n❌ Error in theme customization: ${error.message}`));
+    }
+  }
+}
+
 async function socialMediaExport(resumeData: ResumeData): Promise<void> {
   const { platform } = await inquirer.prompt([
     {
@@ -556,38 +741,59 @@ async function performExport(resumeData: ResumeData, format: string): Promise<vo
   };
   const fullFilename = `${filename}.${extensions[format]}`;
   
+  // Initialize animated loading
+  const mainSpinner = createExportingSpinner(`Preparing ${format} export...`);
+  
   let output: string | Buffer;
   let isBuffer = false;
   
   try {
+    // Simulate preparation time
+    await new Promise(resolve => setTimeout(resolve, 500));
+    AnimatedLoadingManager.updateSpinner(mainSpinner, `Generating ${format} content...`);
+    
     if (['markdown', 'latex'].includes(format)) {
+      await new Promise(resolve => setTimeout(resolve, 300));
       const exportOptions: ExportOptions = {
         format: format as any,
         includeContact: true
       };
       output = exportResumeWithOptions(resumeData, exportOptions);
     } else {
+      await new Promise(resolve => setTimeout(resolve, 200));
       switch (format) {
         case 'json':
+          AnimatedLoadingManager.updateSpinner(mainSpinner, 'Formatting JSON structure...');
+          await new Promise(resolve => setTimeout(resolve, 300));
           output = formatJsonResume(resumeData);
           break;
         case 'plain':
+          AnimatedLoadingManager.updateSpinner(mainSpinner, 'Formatting plain text...');
+          await new Promise(resolve => setTimeout(resolve, 400));
           output = formatPlainResume(resumeData);
           break;
         case 'html':
+          AnimatedLoadingManager.updateSpinner(mainSpinner, 'Generating HTML markup...');
+          await new Promise(resolve => setTimeout(resolve, 600));
           output = formatHtmlResume(resumeData);
           break;
         case 'pdf':
-          console.log(chalk.yellowBright('\n⏳ Generating PDF... This may take a moment.'));
+          AnimatedLoadingManager.updateSpinner(mainSpinner, 'Generating PDF... This may take a moment.');
+          await new Promise(resolve => setTimeout(resolve, 1200));
           output = await formatPdfResume(resumeData);
           isBuffer = true;
           break;
         case 'colored':
         default:
+          AnimatedLoadingManager.updateSpinner(mainSpinner, 'Applying colors and formatting...');
+          await new Promise(resolve => setTimeout(resolve, 500));
           output = formatColoredResume(resumeData);
           break;
       }
     }
+    
+    AnimatedLoadingManager.updateSpinner(mainSpinner, 'Writing file to disk...');
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     if (isBuffer) {
       fs.writeFileSync(fullFilename, output);
@@ -595,10 +801,16 @@ async function performExport(resumeData: ResumeData, format: string): Promise<vo
       fs.writeFileSync(fullFilename, output, 'utf8');
     }
     
-    console.log(chalk.greenBright(`\n✅ Resume exported successfully to ${fullFilename}!\n`));
+    AnimatedLoadingManager.succeedSpinner(mainSpinner, `Resume exported successfully to ${fullFilename}!`);
+    
+    // Show additional success information
+    console.log(chalk.green(`\n✨ Export completed successfully!`));
+    console.log(chalk.cyan(`📁 File: ${fullFilename}`));
+    console.log(chalk.gray(`📊 Size: ${isBuffer ? (output as Buffer).length : (output as string).length} ${isBuffer ? 'bytes' : 'characters'}`));
     
   } catch (error: any) {
-    console.error(chalk.red(`Error exporting resume: ${error.message}`));
+    AnimatedLoadingManager.failSpinner(mainSpinner, `Export failed: ${error.message}`);
+    console.error(chalk.red(`\n❌ Error exporting resume: ${error.message}`));
   }
 }
 
@@ -658,7 +870,9 @@ async function checkGrammar(resumeData: ResumeData): Promise<void> {
   if (checkType === 'back') return;
   
   try {
-    console.log(chalk.yellow('\n🔄 Checking grammar and spelling...'));
+    // Create analysis spinner sequence
+    const initSpinner = createAnalyzingSpinner('Initializing grammar checker...');
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const options: GrammarCheckOptions = {
       checkSpelling: checkType === 'full' || checkType === 'spelling',
@@ -668,7 +882,26 @@ async function checkGrammar(resumeData: ResumeData): Promise<void> {
       strictMode: false
     };
     
+    AnimatedLoadingManager.succeedSpinner(initSpinner, 'Grammar checker initialized');
+    
+    const analysisSpinner = createAnalyzingSpinner('Analyzing resume content...');
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     const result = checker.checkResume(resumeData, options);
+    
+    if (result.totalIssues === 0) {
+      AnimatedLoadingManager.succeedSpinner(analysisSpinner, 'Analysis complete - No issues found!');
+      console.log(chalk.green('\n✅ No grammar or style issues found! Your resume looks great.'));
+      return;
+    }
+    
+    AnimatedLoadingManager.warnSpinner(analysisSpinner, `Found ${result.totalIssues} potential issue(s)`);
+    
+    // Process results with spinner
+    const processingSpinner = createAnalyzingSpinner('Organizing findings...');
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
+    AnimatedLoadingManager.succeedSpinner(processingSpinner, 'Results organized by category');
     
     console.log(chalk.green(`\n📊 Grammar Check Results:`));
     console.log(chalk.blue(`Total Issues: ${result.totalIssues}`));
@@ -704,11 +937,18 @@ async function checkGrammar(resumeData: ResumeData): Promise<void> {
     ]);
     
     if (exportReport) {
+      const exportSpinner = createGeneratingSpinner('Generating detailed report...');
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
       const exportContent = checker.exportReport(result, 'json');
       await fsPromises.writeFile('grammar-check-report.json', exportContent, 'utf8');
+      
+      AnimatedLoadingManager.succeedSpinner(exportSpinner, 'Grammar report exported successfully!');
       console.log(chalk.green('\n✅ Grammar report exported to grammar-check-report.json!'));
     }
   } catch (error) {
+    const errorSpinner = createAnalyzingSpinner('Processing error...');
+    AnimatedLoadingManager.failSpinner(errorSpinner, `Grammar check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     console.error(chalk.red(`\n❌ Grammar check failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
   }
 }

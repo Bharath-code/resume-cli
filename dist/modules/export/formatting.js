@@ -1,5 +1,8 @@
 import chalk from 'chalk';
 import boxen from 'boxen';
+import { ThemeEngine } from '../theming/theme-engine.js';
+import { ThemeModeManager } from '../theming/theme-mode.js';
+import { loadConfig } from '../core/config.js';
 import { formatBoldText, stripMarkdown } from '../../utils/formatting.js';
 /**
  * Format resume with colors for terminal display
@@ -144,6 +147,10 @@ export function formatJsonResume(data, sections) {
 }
 export function formatHtmlResume(data, sections) {
     const selectedSections = sections || ['personal', 'profile', 'techStack', 'experience', 'projects', 'leadership', 'openSource', 'education'];
+    // Load user config and get current theme
+    const config = loadConfig();
+    const currentTheme = ThemeEngine.getThemeById(config.theme) || ThemeEngine.getThemeById('modern-professional');
+    const themeMode = ThemeModeManager.getCurrentMode();
     let htmlContent = '';
     if (selectedSections.includes('personal')) {
         htmlContent += `
@@ -239,6 +246,11 @@ export function formatHtmlResume(data, sections) {
         </div>
       `).join('')}
     </section>`;
+    }
+    // Apply theme to HTML content
+    if (currentTheme) {
+        const effectiveMode = themeMode === 'auto' ? ThemeModeManager.getEffectiveMode() : (themeMode === 'dark' ? 'dark' : 'light');
+        return ThemeEngine.applyThemeToHTML(htmlContent, currentTheme, effectiveMode);
     }
     return htmlContent;
 }

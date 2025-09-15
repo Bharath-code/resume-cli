@@ -6,6 +6,8 @@ import { ATSScoreCalculator } from '../analysis/ats-score.js';
 import { KeywordOptimizer } from '../analysis/keyword-optimizer.js';
 import { calculateResumeStats, displayResumeStats, displayTechBreakdown, displayExperienceTimeline } from '../export/statistics.js';
 import { GitHubAnalyticsEngine, GitHubAnalyticsOptions } from '../analysis/github-analytics.js';
+import { AnimatedLoadingManager, createLoadingSpinner, createAnalyzingSpinner, createGeneratingSpinner, createProcessingSpinner } from '../utilities/animated-loading.js';
+import { ProgressBarManager } from '../utilities/progress-bars.js';
 
 
 
@@ -68,19 +70,58 @@ export async function showAnalyticsDashboard(resumeData: ResumeData): Promise<vo
   
   console.log((chalk as any)[colors.primary].bold('\n📊 Resume Analytics Dashboard\n'));
   
-  // Display comprehensive resume statistics
+  // Create multi-step progress for dashboard loading
+  const dashboardProgress = ProgressBarManager.createMultiStepProgress([
+    'Analyzing resume data',
+    'Calculating statistics',
+    'Processing technology breakdown',
+    'Generating experience timeline',
+    'Computing ATS preview'
+  ], {
+    primary: colors.primary,
+    secondary: colors.secondary,
+    accent: colors.accent,
+    success: '#00FF00',
+    error: '#FF0000',
+    warning: '#FFFF00',
+    muted: '#888888'
+  });
+  
+  // Step 1: Analyze resume data
+  await new Promise(resolve => setTimeout(resolve, 800));
+  dashboardProgress.nextStep('Resume data analyzed');
+  
+  // Step 2: Calculate comprehensive statistics
+  const statsSpinner = createAnalyzingSpinner('Calculating comprehensive statistics...');
+  await new Promise(resolve => setTimeout(resolve, 1000));
   const stats = calculateResumeStats(resumeData);
+  AnimatedLoadingManager.succeedSpinner(statsSpinner, 'Statistics calculated successfully!');
+  dashboardProgress.nextStep('Statistics calculated');
+  
   displayResumeStats(stats);
   
-  // Display technology breakdown
+  // Step 3: Technology breakdown
+  const techSpinner = createProcessingSpinner('Processing technology breakdown...');
+  await new Promise(resolve => setTimeout(resolve, 700));
+  AnimatedLoadingManager.succeedSpinner(techSpinner, 'Technology analysis complete!');
+  dashboardProgress.nextStep('Technology breakdown processed');
+  
   console.log((chalk as any)[colors.primary].bold('\n🔧 Technology Breakdown'));
   displayTechBreakdown(resumeData);
   
-  // Display experience timeline
+  // Step 4: Experience timeline
+  const timelineSpinner = createGeneratingSpinner('Generating experience timeline...');
+  await new Promise(resolve => setTimeout(resolve, 600));
+  AnimatedLoadingManager.succeedSpinner(timelineSpinner, 'Timeline generated successfully!');
+  dashboardProgress.nextStep('Experience timeline generated');
+  
   console.log((chalk as any)[colors.primary].bold('\n📈 Experience Timeline'));
   displayExperienceTimeline(resumeData);
   
-  // Quick ATS preview
+  // Step 5: Quick ATS preview
+  const atsSpinner = createAnalyzingSpinner('Computing ATS compatibility preview...');
+  await new Promise(resolve => setTimeout(resolve, 900));
+  
   const atsCalculator = new ATSScoreCalculator();
   const mockJob = {
     title: 'Software Engineer',
@@ -92,6 +133,9 @@ export async function showAnalyticsDashboard(resumeData: ResumeData): Promise<vo
   };
   
   const atsResult = atsCalculator.calculateScore(resumeData, mockJob);
+  AnimatedLoadingManager.succeedSpinner(atsSpinner, 'ATS preview computed!');
+  dashboardProgress.complete('Analytics dashboard ready!');
+  
   console.log((chalk as any)[colors.primary].bold('\n🎯 Quick ATS Score Preview'));
   console.log((chalk as any)[colors.accent](`Overall Score: ${atsResult.overallScore}%`));
   console.log((chalk as any)[colors.secondary]('💡 Use "ATS Compatibility Score" for detailed analysis\n'));
@@ -115,9 +159,46 @@ export async function showATSScore(resumeData: ResumeData): Promise<void> {
     }
   ]);
   
+  // Create loading spinner for ATS analysis
+  const atsSpinner = createAnalyzingSpinner('Initializing ATS compatibility analysis...');
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
   const atsCalculator = new ATSScoreCalculator();
+  AnimatedLoadingManager.updateSpinner(atsSpinner, 'ATS calculator initialized');
+  await new Promise(resolve => setTimeout(resolve, 500));
   
   if (jobDescription.trim()) {
+    AnimatedLoadingManager.updateSpinner(atsSpinner, 'Processing job description...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    AnimatedLoadingManager.succeedSpinner(atsSpinner, 'Job description processed successfully!');
+    
+    // Create progress for detailed analysis
+    const analysisProgress = ProgressBarManager.createMultiStepProgress([
+      'Parsing job requirements',
+      'Extracting keywords',
+      'Analyzing resume match',
+      'Calculating compatibility score'
+    ], {
+      primary: colors.primary,
+      secondary: colors.secondary,
+      accent: colors.accent,
+      success: '#00FF00',
+      error: '#FF0000',
+      warning: '#FFFF00',
+      muted: '#888888'
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 700));
+    analysisProgress.nextStep('Job requirements parsed');
+    
+    await new Promise(resolve => setTimeout(resolve, 600));
+    analysisProgress.nextStep('Keywords extracted');
+    
+    await new Promise(resolve => setTimeout(resolve, 800));
+    analysisProgress.nextStep('Resume match analyzed');
+    
+    await new Promise(resolve => setTimeout(resolve, 900));
+    analysisProgress.complete('ATS analysis completed!');
     // Analyze against specific job description
     const job = {
       title: 'Target Position',

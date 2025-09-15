@@ -1,8 +1,9 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { UserConfig } from '../../data/types.js';
-import { getThemeColors, saveConfig } from '../core/config.js';
+import { getThemeColors, saveConfig, updateConfig } from '../core/config.js';
 import { ColorPaletteGenerator } from '../theming/color-generator.js';
+import { ThemeModeManager } from '../theming/theme-mode.js';
 
 /**
  * Customize theme
@@ -308,6 +309,11 @@ export async function handleThemeMode(config: UserConfig): Promise<void> {
   
   console.log((chalk as any)[colors.primary].bold('\n🌙 Dark/Light Mode Settings\n'));
   
+  // Show current mode
+  const currentMode = ThemeModeManager.getCurrentMode();
+  const effectiveMode = ThemeModeManager.getEffectiveMode();
+  console.log(chalk.gray(`Current mode: ${currentMode} (effective: ${effectiveMode})\n`));
+  
   const { modeAction } = await inquirer.prompt([
     {
       type: 'list',
@@ -327,13 +333,21 @@ export async function handleThemeMode(config: UserConfig): Promise<void> {
   
   switch (modeAction) {
     case 'light':
+      ThemeModeManager.setMode('light');
       console.log((chalk as any)[colors.success]('\n☀️ Light mode activated!\n'));
+      // Update config to persist the setting
+      updateConfig({ theme: 'light' });
       break;
     case 'dark':
+      ThemeModeManager.setMode('dark');
       console.log((chalk as any)[colors.success]('\n🌙 Dark mode activated!\n'));
+      // Update config to persist the setting
+      updateConfig({ theme: 'dark' });
       break;
     case 'auto':
+      ThemeModeManager.setMode('auto');
       console.log((chalk as any)[colors.success]('\n🔄 Auto mode activated! Theme will switch based on system settings.\n'));
+      // Note: auto mode is handled by ThemeModeManager, no config update needed
       break;
     case 'configure':
       const { autoSettings } = await inquirer.prompt([
@@ -349,6 +363,37 @@ export async function handleThemeMode(config: UserConfig): Promise<void> {
           ]
         }
       ]);
+      
+      if (autoSettings.includes('Custom time schedule')) {
+        const { lightTime, darkTime } = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'lightTime',
+            message: 'Light mode start time (HH:MM):',
+            default: '06:00',
+            validate: (input) => {
+              const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+              return timeRegex.test(input) || 'Please enter time in HH:MM format';
+            }
+          },
+          {
+            type: 'input',
+            name: 'darkTime',
+            message: 'Dark mode start time (HH:MM):',
+            default: '18:00',
+            validate: (input) => {
+              const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+              return timeRegex.test(input) || 'Please enter time in HH:MM format';
+            }
+          }
+        ]);
+        
+        // Enable auto switch with custom times
+        ThemeModeManager.enableAutoSwitch(lightTime, darkTime);
+        
+        console.log((chalk as any)[colors.success](`\n⏰ Custom schedule set: Light at ${lightTime}, Dark at ${darkTime}\n`));
+      }
+      
       console.log((chalk as any)[colors.success]('\n⚙️ Auto mode settings configured!\n'));
       break;
   }
