@@ -21,7 +21,7 @@ export function createProgram() {
         .description('CLI resume for Bharathkumar Palanisamy - Full-Stack Engineer')
         .version(packageJson.version);
     program
-        .option('-f, --format <type>', 'output format (colored, plain, json, html, pdf, markdown, latex, linkedin, twitter)', 'colored')
+        .option('-f, --format <type>', 'output format (colored, plain, json, html, pdf, markdown, latex, linkedin, twitter, jsonld, ats, portfolio, api)', 'colored')
         .option('-s, --section <sections...>', 'specific sections to display (personal, profile, techStack, experience, projects, leadership, openSource, education)')
         .option('-o, --output <file>', 'save resume to file')
         .option('-t, --template <name>', 'use predefined template (github_profile, academic_cv, linkedin_summary, twitter_bio, tech_resume, creative_portfolio)')
@@ -73,7 +73,7 @@ export async function handleCliAction(options) {
     // Generate output based on format
     const format = options.format;
     // Handle new export formats
-    if (['markdown', 'latex', 'linkedin', 'twitter'].includes(format)) {
+    if (['markdown', 'latex', 'linkedin', 'twitter', 'jsonld', 'ats', 'portfolio', 'api'].includes(format)) {
         let template = undefined;
         // Use specified template or default based on format
         if (options.template) {
@@ -90,7 +90,11 @@ export async function handleCliAction(options) {
                 'markdown': 'github_profile',
                 'latex': 'academic_cv',
                 'linkedin': 'linkedin_summary',
-                'twitter': 'twitter_bio'
+                'twitter': 'twitter_bio',
+                'jsonld': 'tech_resume',
+                'ats': 'tech_resume',
+                'portfolio': 'creative_portfolio',
+                'api': 'tech_resume'
             };
             const templateName = defaultTemplates[format];
             template = Object.values(EXPORT_TEMPLATES).find(t => t.name === templateName);

@@ -28,6 +28,26 @@ npx bharathkumar-palanisamy --section personal experience
 npx bharathkumar-palanisamy --format plain --output my-resume.txt
 npx bharathkumar-palanisamy --format html --output resume.html
 npx bharathkumar-palanisamy --format pdf --output resume.pdf
+
+## Enhanced Export Formats
+
+New specialized export formats for different use cases:
+
+```bash
+# JSON-LD Schema for SEO optimization
+npx bharathkumar-palanisamy --format jsonld --output resume.jsonld
+
+# ATS-friendly format for job applications
+npx bharathkumar-palanisamy --format ats --output resume-ats.txt
+
+# Portfolio website generator
+npx bharathkumar-palanisamy --format portfolio --output portfolio.html
+
+# REST API specification
+npx bharathkumar-palanisamy --format api --output api-spec.json
+```
+
+For detailed documentation, see [Enhanced Export Formats](./docs/ENHANCED_EXPORT_FORMATS.md).
 ```
 ## Local testing
 

@@ -1,0 +1,46 @@
+Bharathkumar Palanisamy
+Full-Stack Engineer (JavaScript / Node.js & React)
+Bengaluru, India
+kumarbharath63@icloud.com | +91 8667861408
+https://linkedin.com/in/bharathkumar-palanisamy
+https://github.com/Bharath-code/
+https://bharathkumar.dev
+
+PROFESSIONAL SUMMARY
+Full-Stack Engineer with 5 years of professional experience across the JavaScript ecosystem. I build end-to-end web applications and production APIs using Node.js, Express, React/Next.js and modern databases. I took a planned career break to focus on personal priorities while actively upskilling — building personal projects, contributing to open source, and staying current with modern tooling. Now actively seeking to re-enter the workforce and contribute as a focused, production-minded engineer.
+
+TECHNICAL SKILLS
+Node.js, Express, TypeScript, Sveltekit, React, Next.js, Astro, Tailwind, shadcnUI, Postgres, MongoDB, Redis, Docker, Kubernetes, GraphQL, REST, GitHub Actions, AWS
+
+PROFESSIONAL EXPERIENCE
+Full-Stack Engineer | Accenture | 2019 — 2021
+• Built an enterprise-level **Code Scan Platform** from scratch that identified vulnerabilities in large-scale applications and suggested potential fixes.
+• Designed and implemented secure, scalable REST APIs with **Node.js, Express, and MongoDB** to handle high-volume scan data.
+• Developed **pixel-perfect frontends** by converting Figma designs into responsive React + Redux dashboards, ensuring design consistency and accessibility.
+• Integrated CI/CD pipelines using **GitHub Actions and Docker**, reducing deployment times by 60% and minimizing production errors.
+• Collaborated with product managers, security teams, and designers to deliver a compliant and enterprise-ready product.
+
+Full-Stack Engineer | Infosys | 2015 — 2019
+• Worked with **major national banks** to design and deliver secure, high-performance features for customer-facing applications.
+• Developed backend services in **Node.js/Express with PostgreSQL**, optimized queries, and introduced **Redis caching** to improve performance by 40%.
+• Implemented **authentication flows (JWT, OAuth2)** and role-based access to meet banking compliance and security standards.
+• Converted business requirements and **Figma wireframes into production-grade UIs** using React, HTML5, and CSS3.
+• Collaborated in Agile sprints with QA and frontend teams to deliver new banking modules within strict deadlines.
+
+KEY PROJECTS
+Task & Reminder App (Personal)
+Full-stack productivity app with grouping, reminders, and AI-generated subtasks to help focus and complete work.
+Technologies: Next.js • Node.js • MongoDB • TailwindCSS • Vercel
+
+Tab Focus Chrome Extension
+Chrome extension to manage open tabs by encouraging focus and closing unused tabs (Manifest V3).
+Technologies: JavaScript • Chrome Extension APIs
+
+Portfolio & Blog
+Personal portfolio built to showcase projects and write technical posts about modern JS tooling.
+Technologies: SvelteKit • Vercel • Markdown
+
+EDUCATION
+B.E in Electrical and Electronics | Sri Krishna College of Engineering and Technology | 2011 – 2015
+• Graduated with First Class Honours
+

@@ -49,6 +49,14 @@ export function exportResume(resumeData, options) {
             return exportToLinkedIn(resumeData, maxLength);
         case 'twitter':
             return exportToTwitter(resumeData, maxLength);
+        case 'jsonld':
+            return exportToJsonLD(resumeData, template, customSections, includeContact);
+        case 'ats':
+            return exportToATS(resumeData, template, customSections, includeContact);
+        case 'portfolio':
+            return exportToPortfolio(resumeData, template, customSections, includeContact);
+        case 'api':
+            return exportToAPI(resumeData, template, customSections, includeContact);
         default:
             throw new Error(`Unsupported export format: ${format}`);
     }
@@ -309,6 +317,399 @@ export function getAvailableTemplates() {
     return Object.values(EXPORT_TEMPLATES);
 }
 export function getTemplateByName(name) {
-    return Object.values(EXPORT_TEMPLATES).find(template => template.name === name);
+    return EXPORT_TEMPLATES[name];
+}
+/**
+ * Export resume as JSON-LD structured data for SEO optimization
+ */
+function exportToJsonLD(resumeData, template, customSections, includeContact = true) {
+    const jsonLD = {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": resumeData.personal.name,
+        "jobTitle": resumeData.personal.role,
+        "description": resumeData.profile,
+        "address": {
+            "@type": "PostalAddress",
+            "addressLocality": resumeData.personal.location
+        },
+        "email": resumeData.personal.email,
+        "telephone": resumeData.personal.phone,
+        "url": resumeData.personal.portfolio,
+        "sameAs": [
+            resumeData.personal.linkedin,
+            resumeData.personal.github
+        ],
+        "knowsAbout": resumeData.techStack,
+        "worksFor": resumeData.experience.map(exp => ({
+            "@type": "Organization",
+            "name": exp.company,
+            "jobTitle": exp.title,
+            "startDate": exp.dates.split(' - ')[0],
+            "endDate": exp.dates.split(' - ')[1] || "Present"
+        })),
+        "alumniOf": resumeData.education.map(edu => ({
+            "@type": "EducationalOrganization",
+            "name": edu.school,
+            "degree": edu.degree
+        })),
+        "hasCredential": resumeData.projects.map(project => ({
+            "@type": "CreativeWork",
+            "name": project.name,
+            "description": project.desc,
+            "keywords": project.tech
+        }))
+    };
+    return JSON.stringify(jsonLD, null, 2);
+}
+/**
+ * Export resume in ATS-friendly format (plain text, keyword optimized)
+ */
+function exportToATS(resumeData, template, customSections, includeContact = true) {
+    const sections = customSections || template?.sections || Object.keys(resumeData);
+    let atsText = '';
+    // Header with contact info
+    atsText += `${resumeData.personal.name}\n`;
+    atsText += `${resumeData.personal.role}\n`;
+    if (includeContact) {
+        atsText += `${resumeData.personal.location}\n`;
+        atsText += `${resumeData.personal.email} | ${resumeData.personal.phone}\n`;
+        atsText += `${resumeData.personal.linkedin}\n`;
+        atsText += `${resumeData.personal.github}\n`;
+        if (resumeData.personal.portfolio) {
+            atsText += `${resumeData.personal.portfolio}\n`;
+        }
+    }
+    atsText += '\n';
+    // Professional Summary
+    if (sections.includes('profile')) {
+        atsText += 'PROFESSIONAL SUMMARY\n';
+        atsText += `${resumeData.profile}\n\n`;
+    }
+    // Technical Skills
+    if (sections.includes('techStack')) {
+        atsText += 'TECHNICAL SKILLS\n';
+        atsText += resumeData.techStack.join(', ');
+        atsText += '\n\n';
+    }
+    // Professional Experience
+    if (sections.includes('experience')) {
+        atsText += 'PROFESSIONAL EXPERIENCE\n';
+        resumeData.experience.forEach(exp => {
+            atsText += `${exp.title} | ${exp.company} | ${exp.dates}\n`;
+            exp.bullets.forEach(bullet => {
+                atsText += `• ${bullet}\n`;
+            });
+            atsText += '\n';
+        });
+    }
+    // Projects
+    if (sections.includes('projects')) {
+        atsText += 'KEY PROJECTS\n';
+        resumeData.projects.forEach(project => {
+            atsText += `${project.name}\n`;
+            atsText += `${project.desc}\n`;
+            atsText += `Technologies: ${project.tech}\n\n`;
+        });
+    }
+    // Education
+    if (sections.includes('education')) {
+        atsText += 'EDUCATION\n';
+        resumeData.education.forEach(edu => {
+            atsText += `${edu.degree} | ${edu.school} | ${edu.dates}\n`;
+            if (edu.details.length > 0) {
+                edu.details.forEach(detail => {
+                    atsText += `• ${detail}\n`;
+                });
+            }
+            atsText += '\n';
+        });
+    }
+    return atsText;
+}
+/**
+ * Generate a complete portfolio website
+ */
+function exportToPortfolio(resumeData, template, customSections, includeContact = true) {
+    const sections = customSections || template?.sections || Object.keys(resumeData);
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${resumeData.personal.name} - Portfolio</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; padding: 60px 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .header h1 { font-size: 3rem; margin-bottom: 10px; }
+        .header p { font-size: 1.2rem; opacity: 0.9; }
+        .section { margin: 60px 0; }
+        .section h2 { font-size: 2rem; margin-bottom: 30px; color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0; }
+        .contact-item { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; }
+        .tech-stack { display: flex; flex-wrap: wrap; gap: 10px; }
+        .tech-item { background: #3498db; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; }
+        .experience-item, .project-item { background: #fff; border: 1px solid #e1e8ed; border-radius: 8px; padding: 25px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .experience-item h3, .project-item h3 { color: #2c3e50; margin-bottom: 10px; }
+        .experience-meta { color: #7f8c8d; font-style: italic; margin-bottom: 15px; }
+        .bullet-list { list-style: none; }
+        .bullet-list li { margin: 8px 0; padding-left: 20px; position: relative; }
+        .bullet-list li:before { content: '▸'; position: absolute; left: 0; color: #3498db; font-weight: bold; }
+        .footer { text-align: center; padding: 40px 0; background: #2c3e50; color: white; margin-top: 60px; }
+        @media (max-width: 768px) { .header h1 { font-size: 2rem; } .container { padding: 10px; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>${resumeData.personal.name}</h1>
+            <p>${resumeData.personal.role}</p>
+        </div>
+    </div>
+
+    <div class="container">
+        ${includeContact ? `
+        <div class="section">
+            <h2>Contact</h2>
+            <div class="contact-grid">
+                <div class="contact-item">
+                    <strong>Location</strong><br>${resumeData.personal.location}
+                </div>
+                <div class="contact-item">
+                    <strong>Email</strong><br><a href="mailto:${resumeData.personal.email}">${resumeData.personal.email}</a>
+                </div>
+                <div class="contact-item">
+                    <strong>LinkedIn</strong><br><a href="${resumeData.personal.linkedin}" target="_blank">View Profile</a>
+                </div>
+                <div class="contact-item">
+                    <strong>GitHub</strong><br><a href="${resumeData.personal.github}" target="_blank">View Projects</a>
+                </div>
+            </div>
+        </div>` : ''}
+
+        ${sections.includes('profile') ? `
+        <div class="section">
+            <h2>About Me</h2>
+            <p style="font-size: 1.1rem; line-height: 1.8;">${resumeData.profile}</p>
+        </div>` : ''}
+
+        ${sections.includes('techStack') ? `
+        <div class="section">
+            <h2>Technical Skills</h2>
+            <div class="tech-stack">
+                ${resumeData.techStack.map(tech => `<span class="tech-item">${tech}</span>`).join('')}
+            </div>
+        </div>` : ''}
+
+        ${sections.includes('experience') ? `
+        <div class="section">
+            <h2>Professional Experience</h2>
+            ${resumeData.experience.map(exp => `
+            <div class="experience-item">
+                <h3>${exp.title}</h3>
+                <div class="experience-meta">${exp.company} • ${exp.dates}</div>
+                <ul class="bullet-list">
+                    ${exp.bullets.map(bullet => `<li>${bullet}</li>`).join('')}
+                </ul>
+            </div>`).join('')}
+        </div>` : ''}
+
+        ${sections.includes('projects') ? `
+        <div class="section">
+            <h2>Key Projects</h2>
+            ${resumeData.projects.map(project => `
+            <div class="project-item">
+                <h3>${project.name}</h3>
+                <p>${project.desc}</p>
+                <p><strong>Technologies:</strong> ${project.tech}</p>
+            </div>`).join('')}
+        </div>` : ''}
+
+        ${sections.includes('education') ? `
+        <div class="section">
+            <h2>Education</h2>
+            ${resumeData.education.map(edu => `
+            <div class="experience-item">
+                <h3>${edu.degree}</h3>
+                <div class="experience-meta">${edu.school} • ${edu.dates}</div>
+                ${edu.details.length > 0 ? `
+                <ul class="bullet-list">
+                    ${edu.details.map(detail => `<li>${detail}</li>`).join('')}
+                </ul>` : ''}
+            </div>`).join('')}
+        </div>` : ''}
+    </div>
+
+    <div class="footer">
+        <div class="container">
+            <p>&copy; ${new Date().getFullYear()} ${resumeData.personal.name}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+    return html;
+}
+/**
+ * Generate REST API endpoints for resume data
+ */
+function exportToAPI(resumeData, template, customSections, includeContact = true) {
+    const apiSpec = {
+        openapi: "3.0.0",
+        info: {
+            title: `${resumeData.personal.name} Resume API`,
+            version: "1.0.0",
+            description: "REST API for accessing resume data",
+            contact: {
+                name: resumeData.personal.name,
+                email: resumeData.personal.email
+            }
+        },
+        servers: [
+            {
+                url: "https://api.resume.dev",
+                description: "Production server"
+            }
+        ],
+        paths: {
+            "/resume": {
+                get: {
+                    summary: "Get complete resume data",
+                    responses: {
+                        "200": {
+                            description: "Complete resume information",
+                            content: {
+                                "application/json": {
+                                    schema: {
+                                        type: "object",
+                                        properties: {
+                                            personal: { type: "object" },
+                                            profile: { type: "string" },
+                                            techStack: { type: "array", items: { type: "string" } },
+                                            experience: { type: "array" },
+                                            projects: { type: "array" },
+                                            education: { type: "array" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/resume/contact": {
+                get: {
+                    summary: "Get contact information",
+                    responses: {
+                        "200": {
+                            description: "Contact details",
+                            content: {
+                                "application/json": {
+                                    schema: {
+                                        type: "object",
+                                        properties: {
+                                            name: { type: "string" },
+                                            email: { type: "string" },
+                                            location: { type: "string" },
+                                            linkedin: { type: "string" },
+                                            github: { type: "string" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/resume/experience": {
+                get: {
+                    summary: "Get professional experience",
+                    responses: {
+                        "200": {
+                            description: "Work experience list",
+                            content: {
+                                "application/json": {
+                                    schema: {
+                                        type: "array",
+                                        items: {
+                                            type: "object",
+                                            properties: {
+                                                company: { type: "string" },
+                                                title: { type: "string" },
+                                                dates: { type: "string" },
+                                                bullets: { type: "array", items: { type: "string" } }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/resume/skills": {
+                get: {
+                    summary: "Get technical skills",
+                    responses: {
+                        "200": {
+                            description: "Technical skills list",
+                            content: {
+                                "application/json": {
+                                    schema: {
+                                        type: "array",
+                                        items: { type: "string" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        components: {
+            schemas: {
+                Resume: {
+                    type: "object",
+                    properties: {
+                        personal: {
+                            type: "object",
+                            properties: {
+                                name: { type: "string" },
+                                role: { type: "string" },
+                                location: { type: "string" },
+                                email: { type: "string" },
+                                phone: { type: "string" },
+                                linkedin: { type: "string" },
+                                github: { type: "string" },
+                                portfolio: { type: "string" }
+                            }
+                        },
+                        profile: { type: "string" },
+                        techStack: {
+                            type: "array",
+                            items: { type: "string" }
+                        },
+                        experience: {
+                            type: "array",
+                            items: {
+                                type: "object",
+                                properties: {
+                                    company: { type: "string" },
+                                    title: { type: "string" },
+                                    dates: { type: "string" },
+                                    bullets: {
+                                        type: "array",
+                                        items: { type: "string" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+    return JSON.stringify(apiSpec, null, 2);
 }
 //# sourceMappingURL=export.js.map

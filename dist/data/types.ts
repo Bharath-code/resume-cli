@@ -42,7 +42,7 @@ export interface ResumeData {
 
 export type SectionKey = keyof ResumeData;
 
-export type OutputFormat = 'colored' | 'plain' | 'json' | 'html' | 'pdf' | 'markdown' | 'latex' | 'linkedin' | 'twitter';
+export type OutputFormat = 'colored' | 'plain' | 'json' | 'html' | 'pdf' | 'markdown' | 'latex' | 'linkedin' | 'twitter' | 'jsonld' | 'ats' | 'portfolio' | 'api';
 
 export interface FormatOptions {
   format: OutputFormat;

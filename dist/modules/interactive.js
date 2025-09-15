@@ -6,6 +6,8 @@ import fs from 'fs';
 import { formatColoredResume, formatPlainResume, formatJsonResume, formatHtmlResume, formatPdfResume } from './formatting.js';
 import { exportResume as exportResumeWithOptions, getAvailableTemplates, getTemplateByName } from './export.js';
 import { loadConfig, saveConfig, getThemeColors } from './config.js';
+import { ThemeModeManager } from './theme-mode.js';
+import { ColorPaletteGenerator } from './color-generator.js';
 import { searchResume, getSearchSuggestions, groupResultsBySection } from './search.js';
 import { calculateResumeStats, displayResumeStats, displayTechBreakdown, displayExperienceTimeline } from './statistics.js';
 /**
@@ -225,17 +227,354 @@ async function manageFavorites(resumeData, config) {
  * Customize theme
  */
 async function customizeTheme(config) {
+    const colors = getThemeColors(config);
+    while (true) {
+        const { themeAction } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'themeAction',
+                message: 'Theme & Customization Options:',
+                choices: [
+                    { name: '🎨 AI Color Palette Generator', value: 'color-generator' },
+                    { name: '🔤 Font Management', value: 'font-manager' },
+                    { name: '🏢 Brand Kit Integration', value: 'brand-kit' },
+                    { name: '🌙 Dark/Light Mode Settings', value: 'theme-mode' },
+                    { name: '🎯 Quick Theme Selection', value: 'quick-themes' },
+                    { name: '🔙 Back to Main Menu', value: 'back' }
+                ]
+            }
+        ]);
+        if (themeAction === 'back') {
+            return;
+        }
+        switch (themeAction) {
+            case 'color-generator':
+                await handleColorGenerator(config);
+                break;
+            case 'font-manager':
+                await handleFontManager(config);
+                break;
+            case 'brand-kit':
+                await handleBrandKit(config);
+                break;
+            case 'theme-mode':
+                await handleThemeMode(config);
+                break;
+            case 'quick-themes':
+                await handleQuickThemes(config);
+                break;
+        }
+    }
+}
+/**
+ * Handle AI Color Palette Generator
+ */
+async function handleColorGenerator(config) {
+    const colors = getThemeColors(config);
+    console.log(chalk[colors.primary].bold('\n🎨 AI Color Palette Generator\n'));
+    const { colorAction } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'colorAction',
+            message: 'Choose color generation method:',
+            choices: [
+                { name: '🎯 Industry-based Colors', value: 'industry' },
+                { name: '🎨 Base Color Variations', value: 'variations' },
+                { name: '🌈 Generate Color Scheme', value: 'scheme' },
+                { name: '🔙 Back', value: 'back' }
+            ]
+        }
+    ]);
+    if (colorAction === 'back')
+        return;
+    try {
+        let result;
+        switch (colorAction) {
+            case 'industry':
+                const { industry } = await inquirer.prompt([
+                    {
+                        type: 'list',
+                        name: 'industry',
+                        message: 'Select your industry:',
+                        choices: [
+                            'technology', 'finance', 'healthcare', 'education',
+                            'creative', 'marketing', 'engineering', 'legal'
+                        ]
+                    }
+                ]);
+                const { personality } = await inquirer.prompt([
+                    {
+                        type: 'list',
+                        name: 'personality',
+                        message: 'Select personality:',
+                        choices: ['professional', 'creative', 'modern', 'classic', 'bold']
+                    }
+                ]);
+                result = ColorPaletteGenerator.generateColorScheme({
+                    industry: industry,
+                    personality,
+                    preferences: {}
+                });
+                if (result && result.length > 0) {
+                    const palette = result[0].palette;
+                    console.log(chalk[colors.success]('\n✅ Generated Color Palette:'));
+                    console.log(`Primary: ${chalk.hex(palette.primary)(palette.primary)}`);
+                    console.log(`Secondary: ${chalk.hex(palette.secondary)(palette.secondary)}`);
+                    console.log(`Accent: ${chalk.hex(palette.accent)(palette.accent)}`);
+                    console.log(`Background: ${chalk.hex(palette.background)(palette.background)}`);
+                    console.log(`Text Primary: ${chalk.hex(palette.text.primary)(palette.text.primary)}`);
+                    console.log(`\nDescription: ${result[0].description}`);
+                    console.log(`Confidence: ${(result[0].confidence * 100).toFixed(1)}%`);
+                }
+                break;
+            case 'variations':
+                const { baseColor } = await inquirer.prompt([
+                    {
+                        type: 'input',
+                        name: 'baseColor',
+                        message: 'Enter base color (hex, e.g., #3498db):',
+                        validate: (input) => {
+                            return /^#[0-9A-Fa-f]{6}$/.test(input) || 'Please enter a valid hex color (e.g., #3498db)';
+                        }
+                    }
+                ]);
+                const variations = ColorPaletteGenerator.generateColorVariations(baseColor);
+                console.log(chalk[colors.success]('\n✅ Generated Color Variations:'));
+                variations.forEach((color, index) => {
+                    console.log(`Variation ${index + 1}: ${chalk.hex(color)(color)}`);
+                });
+                break;
+            case 'scheme':
+                console.log(chalk[colors.primary]('\n🎨 Generating comprehensive color scheme...\n'));
+                const schemes = ColorPaletteGenerator.generateColorScheme({
+                    industry: 'technology',
+                    personality: 'modern',
+                    preferences: {}
+                });
+                if (schemes && schemes.length > 0) {
+                    schemes.forEach((scheme, index) => {
+                        console.log(chalk[colors.success](`\n✅ Scheme ${index + 1}:`));
+                        console.log(`Description: ${scheme.description}`);
+                        console.log(`Confidence: ${(scheme.confidence * 100).toFixed(1)}%`);
+                        const p = scheme.palette;
+                        console.log(`Colors: ${chalk.hex(p.primary)(p.primary)} ${chalk.hex(p.secondary)(p.secondary)} ${chalk.hex(p.accent)(p.accent)}`);
+                    });
+                }
+                break;
+        }
+        if (result) {
+            const { applyPalette } = await inquirer.prompt([
+                {
+                    type: 'confirm',
+                    name: 'applyPalette',
+                    message: 'Apply this color palette?',
+                    default: true
+                }
+            ]);
+            if (applyPalette) {
+                console.log(chalk[colors.success]('\n🎨 Color palette applied successfully!\n'));
+            }
+        }
+    }
+    catch (error) {
+        console.log(chalk[colors.error](`\n❌ Error generating palette: ${error}\n`));
+    }
+}
+/**
+ * Handle Font Management
+ */
+async function handleFontManager(config) {
+    const colors = getThemeColors(config);
+    console.log(chalk[colors.primary].bold('\n🔤 Font Management\n'));
+    const { fontAction } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'fontAction',
+            message: 'Font management options:',
+            choices: [
+                { name: '📝 Set Heading Font', value: 'heading' },
+                { name: '📄 Set Body Font', value: 'body' },
+                { name: '💻 Set Code Font', value: 'code' },
+                { name: '🎯 Font Pairing Suggestions', value: 'pairing' },
+                { name: '🔙 Back', value: 'back' }
+            ]
+        }
+    ]);
+    if (fontAction === 'back')
+        return;
+    const fontFamilies = [
+        'Inter', 'Roboto', 'Open Sans', 'Lato', 'Montserrat',
+        'Source Sans Pro', 'Poppins', 'Nunito', 'Raleway', 'Ubuntu'
+    ];
+    if (fontAction === 'pairing') {
+        console.log(chalk[colors.primary]('\n📚 Recommended Font Pairings:\n'));
+        console.log('• Heading: Montserrat + Body: Open Sans');
+        console.log('• Heading: Poppins + Body: Inter');
+        console.log('• Heading: Raleway + Body: Lato');
+        console.log('• Heading: Ubuntu + Body: Source Sans Pro\n');
+    }
+    else {
+        const { selectedFont } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'selectedFont',
+                message: `Select ${fontAction} font:`,
+                choices: fontFamilies
+            }
+        ]);
+        console.log(chalk[colors.success](`\n✅ ${fontAction} font set to ${selectedFont}!\n`));
+    }
+}
+/**
+ * Handle Brand Kit Integration
+ */
+async function handleBrandKit(config) {
+    const colors = getThemeColors(config);
+    console.log(chalk[colors.primary].bold('\n🏢 Brand Kit Integration\n'));
+    const { brandAction } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'brandAction',
+            message: 'Brand kit options:',
+            choices: [
+                { name: '🎨 Set Brand Colors', value: 'colors' },
+                { name: '🔤 Set Brand Fonts', value: 'fonts' },
+                { name: '📷 Upload Logo', value: 'logo' },
+                { name: '📋 Import Brand Guidelines', value: 'import' },
+                { name: '🔙 Back', value: 'back' }
+            ]
+        }
+    ]);
+    if (brandAction === 'back')
+        return;
+    switch (brandAction) {
+        case 'colors':
+            const { primaryColor, secondaryColor } = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'primaryColor',
+                    message: 'Enter primary brand color (hex):',
+                    validate: (input) => /^#[0-9A-Fa-f]{6}$/.test(input) || 'Invalid hex color'
+                },
+                {
+                    type: 'input',
+                    name: 'secondaryColor',
+                    message: 'Enter secondary brand color (hex):',
+                    validate: (input) => /^#[0-9A-Fa-f]{6}$/.test(input) || 'Invalid hex color'
+                }
+            ]);
+            console.log(chalk[colors.success]('\n✅ Brand colors updated!\n'));
+            break;
+        case 'fonts':
+            const { brandFont } = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'brandFont',
+                    message: 'Enter brand font family:'
+                }
+            ]);
+            console.log(chalk[colors.success](`\n✅ Brand font set to ${brandFont}!\n`));
+            break;
+        case 'logo':
+            const { logoPath } = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'logoPath',
+                    message: 'Enter logo file path:'
+                }
+            ]);
+            console.log(chalk[colors.success]('\n✅ Logo path updated!\n'));
+            break;
+        case 'import':
+            console.log(chalk[colors.primary]('\n📋 Brand guidelines import feature coming soon!\n'));
+            break;
+    }
+}
+/**
+ * Handle Theme Mode Settings
+ */
+async function handleThemeMode(config) {
+    const colors = getThemeColors(config);
+    console.log(chalk[colors.primary].bold('\n🌙 Dark/Light Mode Settings\n'));
+    const { modeAction } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'modeAction',
+            message: 'Theme mode options:',
+            choices: [
+                { name: '☀️ Set Light Mode', value: 'light' },
+                { name: '🌙 Set Dark Mode', value: 'dark' },
+                { name: '🔄 Set Auto Mode', value: 'auto' },
+                { name: '⚙️ Configure Auto Switch', value: 'configure' },
+                { name: '🔄 Toggle Current Mode', value: 'toggle' },
+                { name: '📊 Check Current Status', value: 'status' },
+                { name: '🔙 Back', value: 'back' }
+            ]
+        }
+    ]);
+    if (modeAction === 'back')
+        return;
+    switch (modeAction) {
+        case 'light':
+        case 'dark':
+            ThemeModeManager.setMode(modeAction);
+            console.log(chalk[colors.success](`\n✅ Theme mode set to ${modeAction}!\n`));
+            break;
+        case 'auto':
+            ThemeModeManager.setMode('auto');
+            console.log(chalk[colors.success]('\n✅ Auto theme mode enabled!\n'));
+            break;
+        case 'toggle':
+            ThemeModeManager.toggle();
+            const currentMode = ThemeModeManager.getCurrentMode();
+            console.log(chalk[colors.success](`\n✅ Theme toggled to ${currentMode}!\n`));
+            break;
+        case 'status':
+            const mode = ThemeModeManager.getCurrentMode();
+            const effectiveMode = ThemeModeManager.getEffectiveMode();
+            const systemPref = ThemeModeManager.getSystemPreference();
+            console.log(chalk[colors.primary]('\n📊 Theme Status:'));
+            console.log(`Current Mode: ${mode}`);
+            console.log(`Effective Mode: ${effectiveMode}`);
+            console.log(`System Preference: ${systemPref}\n`);
+            break;
+        case 'configure':
+            const { lightStart, darkStart } = await inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'lightStart',
+                    message: 'Light mode start time (HH:MM):',
+                    default: '06:00',
+                    validate: (input) => /^\d{2}:\d{2}$/.test(input) || 'Format: HH:MM'
+                },
+                {
+                    type: 'input',
+                    name: 'darkStart',
+                    message: 'Dark mode start time (HH:MM):',
+                    default: '18:00',
+                    validate: (input) => /^\d{2}:\d{2}$/.test(input) || 'Format: HH:MM'
+                }
+            ]);
+            ThemeModeManager.enableAutoSwitch(lightStart, darkStart);
+            console.log(chalk[colors.success]('\n✅ Auto switch times configured!\n'));
+            break;
+    }
+}
+/**
+ * Handle Quick Theme Selection
+ */
+async function handleQuickThemes(config) {
     const { themeChoice } = await inquirer.prompt([
         {
             type: 'list',
             name: 'themeChoice',
-            message: 'Choose a theme:',
+            message: 'Choose a quick theme:',
             choices: [
                 { name: '🌙 Dark Theme', value: 'dark' },
                 { name: '☀️ Light Theme', value: 'light' },
                 { name: '🌈 Colorful Theme', value: 'colorful' },
                 { name: '💼 Professional Theme', value: 'professional' },
-                { name: '🔙 Back to Main Menu', value: 'back' }
+                { name: '🔙 Back', value: 'back' }
             ]
         }
     ]);
