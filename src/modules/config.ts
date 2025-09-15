@@ -1,6 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { UserConfig, OutputFormat, SectionKey, ThemeColors } from '../data/types.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.resume-cli');
@@ -114,7 +114,8 @@ export function getThemeColors(config: UserConfig): ThemeColors {
       accent: 'greenBright',
       success: 'greenBright',
       error: 'redBright',
-      warning: 'yellowBright'
+      warning: 'yellowBright',
+      muted: 'gray'
     },
     light: {
       primary: 'blue',
@@ -122,7 +123,8 @@ export function getThemeColors(config: UserConfig): ThemeColors {
       accent: 'green',
       success: 'green',
       error: 'red',
-      warning: 'yellow'
+      warning: 'yellow',
+      muted: 'gray'
     },
     colorful: {
       primary: 'magentaBright',
@@ -130,7 +132,8 @@ export function getThemeColors(config: UserConfig): ThemeColors {
       accent: 'cyanBright',
       success: 'greenBright',
       error: 'redBright',
-      warning: 'yellowBright'
+      warning: 'yellowBright',
+      muted: 'gray'
     },
     professional: {
       primary: 'blue',
@@ -138,7 +141,8 @@ export function getThemeColors(config: UserConfig): ThemeColors {
       accent: 'green',
       success: 'green',
       error: 'red',
-      warning: 'yellow'
+      warning: 'yellow',
+      muted: 'gray'
     }
   };
   

@@ -1,6 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 const CONFIG_DIR = path.join(os.homedir(), '.resume-cli');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 /**
@@ -105,7 +105,8 @@ export function getThemeColors(config) {
             accent: 'greenBright',
             success: 'greenBright',
             error: 'redBright',
-            warning: 'yellowBright'
+            warning: 'yellowBright',
+            muted: 'gray'
         },
         light: {
             primary: 'blue',
@@ -113,7 +114,8 @@ export function getThemeColors(config) {
             accent: 'green',
             success: 'green',
             error: 'red',
-            warning: 'yellow'
+            warning: 'yellow',
+            muted: 'gray'
         },
         colorful: {
             primary: 'magentaBright',
@@ -121,7 +123,8 @@ export function getThemeColors(config) {
             accent: 'cyanBright',
             success: 'greenBright',
             error: 'redBright',
-            warning: 'yellowBright'
+            warning: 'yellowBright',
+            muted: 'gray'
         },
         professional: {
             primary: 'blue',
@@ -129,7 +132,8 @@ export function getThemeColors(config) {
             accent: 'green',
             success: 'green',
             error: 'red',
-            warning: 'yellow'
+            warning: 'yellow',
+            muted: 'gray'
         }
     };
     return themes[config.theme] || themes.dark;

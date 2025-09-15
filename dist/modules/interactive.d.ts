@@ -4,10 +4,6 @@ import { ResumeData } from '../data/types.js';
  */
 export declare function runInteractiveMode(resumeData: ResumeData): Promise<void>;
 /**
- * Generate QR codes for contact information
- */
-export declare function generateQRCodes(resumeData: ResumeData): Promise<void>;
-/**
  * Copy contact information to clipboard
  */
 export declare function copyToClipboard(resumeData: ResumeData): Promise<void>;

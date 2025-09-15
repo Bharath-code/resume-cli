@@ -69,6 +69,7 @@ export interface ThemeColors {
     success: string;
     error: string;
     warning: string;
+    muted: string;
 }
 export interface SearchResult {
     section: string;
