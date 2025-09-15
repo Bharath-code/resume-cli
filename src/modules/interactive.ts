@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import qrcode from 'qrcode';
 import clipboardy from 'clipboardy';
-import fs from 'fs';
+import fs, { promises as fsPromises } from 'fs';
 import { ResumeData, SectionKey, UserConfig, SearchResult, ExportOptions, TemplateConfig } from '../data/types.js';
 import { formatColoredResume, formatPlainResume, formatJsonResume, formatHtmlResume, formatPdfResume } from './formatting.js';
 import { exportResume as exportResumeWithOptions, getAvailableTemplates, getTemplateByName } from './export.js';
@@ -13,6 +13,14 @@ import { ThemeModeManager } from './theme-mode.js';
 import { ColorPaletteGenerator } from './color-generator.js';
 import { searchResume, getSearchSuggestions, groupResultsBySection } from './search.js';
 import { calculateResumeStats, displayResumeStats, displayTechBreakdown, displayExperienceTimeline } from './statistics.js';
+import { QRCodeGenerator } from './qr-code.js';
+import { ContactCardExporter } from './contact-card.js';
+import { ATSScoreCalculator } from './ats-score.js';
+import { KeywordOptimizer } from './keyword-optimizer.js';
+import { LengthOptimizer } from './length-optimizer.js';
+import { GrammarChecker, GrammarCheckOptions, GrammarIssue } from './grammar-checker.js';
+import { SocialIntegration, SocialSyncOptions, SocialSyncResult } from './social-integration.js';
+import { GitHubAnalyticsEngine, GitHubAnalyticsOptions, GitHubAnalytics } from './github-analytics.js';
 
 /**
  * Main interactive mode function
@@ -36,6 +44,12 @@ export async function runInteractiveMode(resumeData: ResumeData): Promise<void> 
           { name: '⭐ Manage Favorites', value: 'favorites' },
           { name: '🎨 Customize Theme', value: 'theme' },
           { name: '📱 Generate QR Codes', value: 'qr' },
+          { name: '💳 Export Contact Card', value: 'contact-card' },
+          { name: '🎯 ATS Score Analysis', value: 'ats-score' },
+          { name: '🔑 Keyword Optimization', value: 'keywords' },
+          { name: '📏 Length Optimization', value: 'length' },
+          { name: '🌐 Social Media Sync', value: 'social-sync' },
+          { name: '📊 GitHub Analytics', value: 'github-analytics' },
           { name: '📋 Copy Contact Info', value: 'clipboard' },
           { name: '💾 Export Resume', value: 'export' },
           { name: '❌ Exit', value: 'exit' }
@@ -61,6 +75,24 @@ export async function runInteractiveMode(resumeData: ResumeData): Promise<void> 
         break;
       case 'qr':
         await generateQRCodes(resumeData);
+        break;
+      case 'contact-card':
+        await exportContactCard(resumeData);
+        break;
+      case 'ats-score':
+        await analyzeATSScore(resumeData);
+        break;
+      case 'keywords':
+        await optimizeKeywords(resumeData);
+        break;
+      case 'length':
+        await optimizeLength(resumeData);
+        break;
+      case 'social-sync':
+        await socialMediaSync(resumeData);
+        break;
+      case 'github-analytics':
+        await analyzeGitHubProfile(resumeData);
         break;
       case 'clipboard':
         await copyToClipboard(resumeData);
@@ -1193,5 +1225,667 @@ async function performTemplateExport(resumeData: ResumeData, exportOptions: Expo
     
   } catch (error: any) {
     console.error(chalk.red(`Error exporting resume: ${error.message}`));
+  }
+}
+
+/**
+ * Export contact card in various formats
+ */
+async function exportContactCard(resumeData: ResumeData): Promise<void> {
+  const { format } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'format',
+      message: 'Select contact card format:',
+      choices: [
+        { name: '📇 vCard (.vcf)', value: 'vcard' },
+        { name: '📄 JSON', value: 'json' },
+        { name: '📋 PDF', value: 'pdf' },
+        { name: '🌐 HTML', value: 'html' },
+        { name: '📦 All formats', value: 'all' }
+      ]
+    }
+  ]);
+
+  const { includeQR } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'includeQR',
+      message: 'Include QR code?',
+      default: true
+    }
+  ]);
+
+  const { outputPath } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'outputPath',
+      message: 'Enter output path (without extension):',
+      default: './contact-card'
+    }
+  ]);
+
+  try {
+     const savedFiles = await ContactCardExporter.saveCard(resumeData, outputPath, {
+       format: format as any,
+       includeQR,
+       qrType: 'vcard',
+       theme: 'modern',
+       includePhoto: false
+     });
+     
+     console.log(chalk.green(`\n✅ Contact card saved successfully!`));
+     console.log(chalk.blue(`📁 Files saved:`));
+     savedFiles.forEach(file => {
+       console.log(chalk.cyan(`  • ${file}`));
+     });
+   } catch (error) {
+     console.error(chalk.red(`\n❌ Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+   }
+}
+
+/**
+ * Analyze ATS score for job descriptions
+ */
+async function analyzeATSScore(resumeData: ResumeData): Promise<void> {
+  const calculator = new ATSScoreCalculator();
+  
+  const { jobDescription } = await inquirer.prompt([
+    {
+      type: 'editor',
+      name: 'jobDescription',
+      message: 'Paste the job description to analyze against:',
+      validate: (input: string) => input.trim().length > 0 || 'Please provide a job description'
+    }
+  ]);
+
+  try {
+    console.log(chalk.yellow('\n🔄 Analyzing ATS compatibility...'));
+    
+    const result = await calculator.calculateScore(resumeData, {
+       title: 'Job Analysis',
+       company: 'Target Company',
+       description: jobDescription,
+       requirements: [],
+       preferredSkills: [],
+       keywords: []
+     });
+     
+     console.log(chalk.green(`\n📊 ATS Analysis Results:`));
+     console.log(chalk.blue(`Overall Score: ${result.overallScore}/100`));
+     console.log(chalk.blue(`Keyword Match: ${result.breakdown.keywordMatch}/100`));
+     console.log(chalk.blue(`Format Score: ${result.breakdown.formatScore}/100`));
+     console.log(chalk.blue(`Experience Match: ${result.breakdown.experienceMatch}/100`));
+    
+    if (result.suggestions.length > 0) {
+      console.log(chalk.yellow('\n💡 Suggestions for improvement:'));
+      result.suggestions.forEach((suggestion, index) => {
+        console.log(chalk.white(`${index + 1}. ${suggestion}`));
+      });
+    }
+    
+    const { exportResults } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'exportResults',
+        message: 'Export detailed analysis report?',
+        default: false
+      }
+    ]);
+    
+    if (exportResults) {
+       const exportContent = calculator.exportAnalysis(result, 'json');
+       await fsPromises.writeFile('ats-analysis-report.json', exportContent, 'utf8');
+       console.log(chalk.green('\n✅ Analysis report exported to ats-analysis-report.json!'));
+     }
+  } catch (error) {
+    console.error(chalk.red(`\n❌ Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+  }
+}
+
+
+async function optimizeLength(resumeData: ResumeData): Promise<void> {
+  const optimizer = new LengthOptimizer();
+  
+  const { targetFormat } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'targetFormat',
+      message: 'Select target format for length optimization:',
+      choices: [
+        { name: '📄 One Page Resume', value: 'one-page' },
+        { name: '📋 Two Page Resume', value: 'two-page' },
+        { name: '💼 LinkedIn Summary', value: 'linkedin' },
+        { name: '🐦 Twitter Bio', value: 'twitter' },
+        { name: '📧 Email Signature', value: 'email' },
+        { name: '🎯 Custom Length', value: 'custom' }
+      ]
+    }
+  ]);
+
+  let targetLength: number;
+  
+  switch (targetFormat) {
+    case 'one-page':
+      targetLength = 600; // ~600 words for one page
+      break;
+    case 'two-page':
+      targetLength = 1200; // ~1200 words for two pages
+      break;
+    case 'linkedin':
+      targetLength = 2000; // LinkedIn character limit
+      break;
+    case 'twitter':
+      targetLength = 160; // Twitter bio limit
+      break;
+    case 'email':
+      targetLength = 300; // Email signature limit
+      break;
+    case 'custom':
+      const { customLength } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'customLength',
+          message: 'Enter target length (characters):',
+          validate: (input: string) => {
+            const num = parseInt(input);
+            return !isNaN(num) && num > 0 ? true : 'Please enter a valid positive number';
+          }
+        }
+      ]);
+      targetLength = parseInt(customLength);
+      break;
+    default:
+      targetLength = 600;
+  }
+
+  try {
+    console.log(chalk.yellow('\n🔄 Analyzing resume length...'));
+    
+    const analysis = optimizer.analyzeLength(resumeData, 'pdf');
+    
+    console.log(chalk.green(`\n📏 Length Analysis Results:`));
+     console.log(chalk.blue(`Current Length: ${analysis.stats.characters} characters (${analysis.stats.words} words)`));
+     console.log(chalk.blue(`Current Pages: ${analysis.stats.pages}`));
+     console.log(chalk.blue(`Target Length: ${targetLength} characters`));
+     console.log(chalk.blue(`Is Optimal: ${analysis.isOptimal ? 'Yes' : 'No'}`));
+     
+     if (analysis.recommendations.length > 0) {
+       console.log(chalk.yellow('\n✂️ Optimization recommendations:'));
+       analysis.recommendations.forEach((recommendation: string, index: number) => {
+         console.log(chalk.white(`${index + 1}. ${recommendation}`));
+       });
+     }
+    
+    const { generateOptimized } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'generateOptimized',
+        message: 'Generate optimized version?',
+        default: true
+      }
+    ]);
+    
+    if (generateOptimized) {
+       const constraints = {
+         maxPages: targetFormat === 'one-page' ? 1 : 2,
+         maxWords: Math.floor(targetLength / 5), // Rough estimate: 5 chars per word
+         targetFormat: 'pdf' as const,
+         prioritySections: ['experience', 'projects', 'techStack']
+       };
+       
+       const options = {
+         preserveKeywords: true,
+         maintainReadability: true,
+         aggressiveMode: targetFormat === 'one-page'
+       };
+       
+       const result = optimizer.optimizeLength(resumeData, constraints, options);
+       
+       const optimizedContent = formatPlainResume(result.optimizedResume);
+       await fsPromises.writeFile(`optimized-resume-${targetFormat}.txt`, optimizedContent, 'utf8');
+       
+       console.log(chalk.green(`\n✅ Optimized resume exported to optimized-resume-${targetFormat}.txt!`));
+       console.log(chalk.blue(`Reduction: ${result.reductionPercentage.toFixed(1)}% (${result.originalLength.words} → ${result.optimizedLength.words} words)`));
+       
+       if (result.suggestions.length > 0) {
+         console.log(chalk.yellow('\n📝 Applied optimizations:'));
+         result.suggestions.forEach((suggestion, index) => {
+           console.log(chalk.white(`${index + 1}. ${suggestion.description} (${suggestion.wordsReduced} words saved)`));
+         });
+       }
+     }
+  } catch (error) {
+    console.error(chalk.red(`\n❌ Length optimization failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+  }
+}
+
+/**
+ * Check grammar and spelling in resume content
+ */
+async function checkGrammar(resumeData: ResumeData): Promise<void> {
+  const checker = new GrammarChecker();
+  
+  const { checkType } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'checkType',
+      message: 'What would you like to check?',
+      choices: [
+        { name: '📝 Full Resume Check', value: 'full' },
+        { name: '📄 Specific Section', value: 'section' },
+        { name: '🎯 Quick Spell Check', value: 'spelling' },
+        { name: '📚 Grammar Only', value: 'grammar' },
+        { name: '🔙 Back to Main Menu', value: 'back' }
+      ]
+    }
+  ]);
+  
+  if (checkType === 'back') return;
+  
+  try {
+    console.log(chalk.yellow('\n🔄 Checking grammar and spelling...'));
+    
+    const options: GrammarCheckOptions = {
+      checkSpelling: checkType === 'full' || checkType === 'spelling',
+      checkGrammar: checkType === 'full' || checkType === 'grammar',
+      checkPunctuation: checkType === 'full',
+      checkStyle: checkType === 'full',
+      strictMode: false
+    };
+    
+    const result = checker.checkResume(resumeData, options);
+    
+    console.log(chalk.green(`\n📊 Grammar Check Results:`));
+    console.log(chalk.blue(`Total Issues: ${result.totalIssues}`));
+    console.log(chalk.blue(`Spelling Errors: ${result.issuesByType.spelling}`));
+    console.log(chalk.blue(`Grammar Issues: ${result.issuesByType.grammar}`));
+    console.log(chalk.blue(`Style Suggestions: ${result.issuesByType.style}`));
+    console.log(chalk.blue(`Punctuation Issues: ${result.issuesByType.punctuation}`));
+    console.log(chalk.blue(`Overall Score: ${result.overallScore}/100`));
+    
+    if (result.issues.length > 0) {
+      console.log(chalk.yellow('\n🔍 Issues found:'));
+      result.issues.slice(0, 10).forEach((issue, index) => {
+        console.log(chalk.white(`${index + 1}. ${issue.type.toUpperCase()}: ${issue.message}`));
+        console.log(chalk.gray(`   Text: "${issue.originalText}"`));
+        if (issue.suggestion) {
+          console.log(chalk.cyan(`   Suggestion: "${issue.suggestion}"`));
+        }
+        console.log(chalk.gray(`   Section: ${issue.section}.${issue.field}`));
+      });
+      
+      if (result.issues.length > 10) {
+        console.log(chalk.gray(`   ... and ${result.issues.length - 10} more issues`));
+      }
+    }
+    
+    const { exportReport } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'exportReport',
+        message: 'Export detailed grammar report?',
+        default: false
+      }
+    ]);
+    
+    if (exportReport) {
+      const exportContent = checker.exportReport(result, 'json');
+      await fsPromises.writeFile('grammar-check-report.json', exportContent, 'utf8');
+      console.log(chalk.green('\n✅ Grammar report exported to grammar-check-report.json!'));
+    }
+  } catch (error) {
+    console.error(chalk.red(`\n❌ Grammar check failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+  }
+}
+
+/**
+  * Optimize keywords for better ATS performance
+  */
+async function socialMediaSync(resumeData: ResumeData): Promise<void> {
+  console.log(chalk.cyan('\n🌐 Social Media Integration'));
+  console.log(chalk.gray('Sync your resume with LinkedIn and GitHub profiles\n'));
+
+  const { platform } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'platform',
+      message: 'Select platform to sync:',
+      choices: [
+        { name: '💼 LinkedIn Profile', value: 'linkedin' },
+        { name: '🐙 GitHub Profile', value: 'github' },
+        { name: '🔄 Sync Both Platforms', value: 'both' },
+        { name: '📊 View Sync Status', value: 'status' },
+        { name: '⬅️  Back to Main Menu', value: 'back' }
+      ]
+    }
+  ]);
+
+  if (platform === 'back') return;
+
+  const socialIntegration = new SocialIntegration();
+
+  try {
+    if (platform === 'status') {
+      // Display current sync status
+      console.log(chalk.yellow('\n📊 Current Sync Status:'));
+      console.log(chalk.gray('• LinkedIn: Not connected'));
+      console.log(chalk.gray('• GitHub: Not connected'));
+      console.log(chalk.blue('\nℹ️  Use sync options to connect your profiles\n'));
+      return;
+    }
+
+    const syncOptions: SocialSyncOptions = {
+      platforms: platform === 'both' ? ['linkedin', 'github'] : [platform as 'linkedin' | 'github'],
+      autoUpdate: false,
+      syncFrequency: 'manual',
+      conflictResolution: 'manual'
+    };
+
+    // First, set up authentication tokens (mock for demonstration)
+    socialIntegration.setAuthToken('linkedin', 'mock-linkedin-token');
+    socialIntegration.setAuthToken('github', 'mock-github-token');
+
+    console.log(chalk.yellow('\n🔄 Starting sync process...'));
+    const results: SocialSyncResult[] = await socialIntegration.syncWithPlatforms(resumeData, syncOptions);
+
+    // Handle conflicts if any exist
+    const conflictResolutions: { [key: string]: 'local' | 'platform' } = {};
+    let hasConflicts = false;
+
+    for (const result of results) {
+      if (result.conflicts && result.conflicts.length > 0) {
+        hasConflicts = true;
+        console.log(chalk.yellow(`\n⚠️  Conflicts detected for ${result.platform}:`));
+        
+        for (const conflict of result.conflicts) {
+          console.log(chalk.cyan(`\n🔄 Field: ${conflict.field}`));
+          console.log(chalk.gray(`Local value: ${conflict.localValue}`));
+          console.log(chalk.gray(`${result.platform} value: ${conflict.platformValue}`));
+          
+          const { resolution } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'resolution',
+              message: 'Which value would you like to keep?',
+              choices: [
+                { name: `Keep local value: "${conflict.localValue}"`, value: 'local' },
+                { name: `Use ${result.platform} value: "${conflict.platformValue}"`, value: 'platform' }
+              ]
+            }
+          ]);
+          
+          conflictResolutions[`${result.platform}.${conflict.field}`] = resolution;
+        }
+      }
+    }
+
+    // Apply sync results with conflict resolutions
+    if (hasConflicts || results.some(r => r.updatedFields.length > 0)) {
+      const updatedResumeData = socialIntegration.applySync(resumeData, results, conflictResolutions);
+      
+      // Update the original resume data object
+      Object.assign(resumeData, updatedResumeData);
+      
+      console.log(chalk.green('\n✅ Resume data updated successfully!'));
+    }
+
+    // Display sync results
+    console.log(chalk.cyan('\n📈 Sync Summary:'));
+    
+    results.forEach(result => {
+      if (result.platform === 'linkedin') {
+        console.log(chalk.blue('\n💼 LinkedIn:'));
+        console.log(`  • Status: ${result.success ? '✅ Success' : '❌ Failed'}`);
+        console.log(`  • Updated fields: ${result.updatedFields.join(', ') || 'None'}`);
+        console.log(`  • Conflicts: ${result.conflicts.length}`);
+        console.log(`  • Message: ${result.message}`);
+      }
+      
+      if (result.platform === 'github') {
+        console.log(chalk.blue('\n🐙 GitHub:'));
+        console.log(`  • Status: ${result.success ? '✅ Success' : '❌ Failed'}`);
+        console.log(`  • Updated fields: ${result.updatedFields.join(', ') || 'None'}`);
+        console.log(`  • Conflicts: ${result.conflicts.length}`);
+        console.log(`  • Message: ${result.message}`);
+      }
+    });
+
+    if (hasConflicts) {
+      console.log(chalk.green('\n🎉 All conflicts resolved and resume updated!'));
+    } else {
+      console.log(chalk.green('\n🎉 Sync completed with no conflicts!'));
+    }
+
+  } catch (error) {
+    console.log(chalk.red('\n❌ Sync failed:'));
+    console.log(chalk.red(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`));
+    console.log(chalk.yellow('\nℹ️  Please check your authentication credentials and try again.'));
+  }
+}
+
+ async function optimizeKeywords(resumeData: ResumeData): Promise<void> {
+  const optimizer = new KeywordOptimizer();
+  
+  const { industry } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'industry',
+      message: 'Select your target industry:',
+      choices: [
+        { name: '💻 Technology', value: 'technology' },
+        { name: '💰 Finance', value: 'finance' },
+        { name: '🏥 Healthcare', value: 'healthcare' },
+        { name: '🎓 Education', value: 'education' },
+        { name: '🏭 Manufacturing', value: 'manufacturing' },
+        { name: '🛒 Retail', value: 'retail' },
+        { name: '🎯 Marketing', value: 'marketing' },
+        { name: '⚖️ Legal', value: 'legal' },
+        { name: '🔬 Research', value: 'research' },
+        { name: '🎨 Creative', value: 'creative' }
+      ]
+    }
+  ]);
+
+  try {
+    console.log(chalk.yellow('\n🔄 Analyzing keywords...'));
+    
+    const analysis = optimizer.analyzeKeywords(resumeData, undefined, {
+       industry: industry,
+       experienceLevel: 'mid'
+     });
+     
+     console.log(chalk.green(`\n🔑 Keyword Analysis Results:`));
+     console.log(chalk.blue(`Current Keywords: ${analysis.currentKeywords.length}`));
+     console.log(chalk.blue(`Keyword Score: ${analysis.score}/100`));
+     
+     if (analysis.missingKeywords.length > 0) {
+       console.log(chalk.yellow('\n📝 Suggested keywords to add:'));
+       analysis.missingKeywords.slice(0, 10).forEach((keyword, index) => {
+         console.log(chalk.white(`${index + 1}. ${keyword.keyword} (${keyword.category})`));
+       });
+     }
+     
+     if (analysis.suggestions.length > 0) {
+       console.log(chalk.cyan('\n🔧 Additional keyword suggestions:'));
+       analysis.suggestions.slice(0, 5).forEach((keyword, index) => {
+         console.log(chalk.white(`${index + 1}. ${keyword.keyword} (${keyword.category})`));
+       });
+     }
+    
+    const { generateReport } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'generateReport',
+        message: 'Generate detailed optimization report?',
+        default: true
+      }
+    ]);
+    
+    if (generateReport) {
+       const exportContent = optimizer.exportAnalysis(analysis, 'json');
+       await fsPromises.writeFile('keyword-analysis-report.json', exportContent, 'utf8');
+       console.log(chalk.green('\n✅ Optimization report exported to keyword-analysis-report.json!'));
+     }
+  } catch (error) {
+    console.error(chalk.red(`\n❌ Keyword analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+  }
+}
+
+/**
+ * Analyze GitHub profile and display analytics
+ */
+async function analyzeGitHubProfile(resumeData: ResumeData): Promise<void> {
+  const config = loadConfig();
+  const colors = getThemeColors(config);
+  
+  console.log((chalk as any)[colors.primary].bold('\n📊 GitHub Analytics Dashboard\n'));
+  
+  const { username } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'username',
+      message: 'Enter your GitHub username:',
+      validate: (input) => input.trim().length > 0 || 'Please enter a valid GitHub username'
+    }
+  ]);
+  
+  try {
+    console.log((chalk as any)[colors.accent]('\n🔍 Fetching GitHub data...'));
+    
+    const analyticsEngine = new GitHubAnalyticsEngine();
+    const options: GitHubAnalyticsOptions = {
+      username: username.trim(),
+      includePrivate: false,
+      maxRepos: 100
+    };
+    
+    const analytics = await analyticsEngine.generateAnalytics(options);
+    
+    // Display user profile
+    console.log((chalk as any)[colors.primary].bold('\n👤 Profile Overview:'));
+    console.log(`Name: ${analytics.user.name || 'N/A'}`);
+    console.log(`Bio: ${analytics.user.bio || 'No bio available'}`);
+    console.log(`Location: ${analytics.user.location || 'Not specified'}`);
+    console.log(`Company: ${analytics.user.company || 'Not specified'}`);
+    console.log(`Public Repos: ${analytics.user.public_repos}`);
+    console.log(`Followers: ${analytics.user.followers}`);
+    console.log(`Following: ${analytics.user.following}`);
+    console.log(`Account Created: ${new Date(analytics.user.created_at).toLocaleDateString()}`);
+    
+    // Display repository stats
+    console.log((chalk as any)[colors.primary].bold('\n📚 Repository Statistics:'));
+    console.log(`Total Stars: ${analytics.stats.totalStars}`);
+    console.log(`Total Forks: ${analytics.stats.totalForks}`);
+    console.log(`Total Commits: ${analytics.stats.totalCommits}`);
+    console.log(`Total PRs: ${analytics.stats.totalPRs}`);
+    console.log(`Total Issues: ${analytics.stats.totalIssues}`);
+    const languages = Object.keys(analytics.stats.mostUsedLanguages).slice(0, 5);
+    console.log(`Top Languages: ${languages.join(', ')}`);
+    
+    // Display top repositories
+    if (analytics.topRepositories.length > 0) {
+      console.log((chalk as any)[colors.primary].bold('\n⭐ Top Repositories:'));
+      analytics.topRepositories.slice(0, 5).forEach((repo, index) => {
+        console.log(`${index + 1}. ${repo.name}`);
+        console.log(`   ⭐ ${repo.stargazers_count} stars | 🍴 ${repo.forks_count} forks`);
+        console.log(`   📝 ${repo.description || 'No description'}`);
+        console.log(`   🔗 ${repo.html_url}`);
+        console.log('');
+      });
+    }
+    
+    // Display contribution activity
+    console.log((chalk as any)[colors.primary].bold('\n📈 Contribution Activity:'));
+    console.log(`Contribution Streak: ${analytics.stats.contributionStreak} days`);
+    const totalContributions = analytics.stats.yearlyContributions.reduce((sum, contrib) => sum + contrib.count, 0);
+    console.log(`Total Contributions (Last Year): ${totalContributions}`);
+    
+    // Display recent activity
+    if (analytics.contributionGraph.length > 0) {
+      console.log('\n📅 Recent Contribution Activity:');
+      const recentContribs = analytics.contributionGraph.slice(-7);
+      recentContribs.forEach((contrib, index) => {
+        console.log(`${contrib.date}: ${contrib.count} contributions`);
+      });
+    }
+    
+    // Ask for next action
+    const { action } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: 'What would you like to do next?',
+        choices: [
+          { name: '💾 Export Analytics to Resume', value: 'export' },
+          { name: '📊 View Detailed Charts', value: 'charts' },
+          { name: '🔄 Refresh Data', value: 'refresh' },
+          { name: '📋 Copy GitHub Stats', value: 'copy' },
+          { name: '↩️  Back to Main Menu', value: 'back' }
+        ]
+      }
+    ]);
+    
+    switch (action) {
+      case 'export':
+         const exportData = await analyticsEngine.exportToResumeData(analytics, resumeData);
+         console.log((chalk as any)[colors.success]('\n✅ GitHub analytics exported to resume data!'));
+         console.log('Added sections:');
+         console.log('- GitHub profile information');
+         console.log('- Repository statistics');
+         console.log('- Contribution metrics');
+         console.log('- Top projects showcase');
+         break;
+         
+       case 'charts':
+         console.log((chalk as any)[colors.accent]('\n📊 Detailed Analytics Charts:'));
+         const formattedDisplay = analyticsEngine.formatAnalyticsForDisplay(analytics);
+         console.log(formattedDisplay);
+         break;
+        
+      case 'copy':
+        const totalContribs = analytics.stats.yearlyContributions.reduce((sum, contrib) => sum + contrib.count, 0);
+         const statsText = `GitHub Stats for ${username}:\n` +
+           `⭐ ${analytics.stats.totalStars} total stars\n` +
+           `📚 ${analytics.user.public_repos} public repositories\n` +
+           `👥 ${analytics.user.followers} followers\n` +
+           `📈 ${totalContribs} contributions this year`;
+        
+        try {
+          await clipboardy.write(statsText);
+          console.log((chalk as any)[colors.success]('\n✅ GitHub stats copied to clipboard!'));
+        } catch (error) {
+          console.error((chalk as any).red('❌ Failed to copy to clipboard'));
+        }
+        break;
+        
+      case 'refresh':
+        await analyzeGitHubProfile(resumeData);
+        return;
+        
+      case 'back':
+        return;
+    }
+    
+  } catch (error) {
+    console.error((chalk as any).red('❌ Error fetching GitHub data:'), error);
+    console.log((chalk as any)[colors.warning]('\n💡 Tips:'));
+    console.log('- Make sure the username is correct');
+    console.log('- Check your internet connection');
+    console.log('- The user profile might be private');
+  }
+  
+  // Ask if user wants to analyze another profile
+  const { analyzeAnother } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'analyzeAnother',
+      message: 'Would you like to analyze another GitHub profile?',
+      default: false
+    }
+  ]);
+  
+  if (analyzeAnother) {
+    await analyzeGitHubProfile(resumeData);
   }
 }
