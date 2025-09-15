@@ -170,7 +170,7 @@ jobs:
           node memory-profile.js
       
       - name: Upload performance report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-report-${{ github.sha }}
           path: performance-report.json
@@ -263,7 +263,7 @@ jobs:
           echo "Note: Size comparison with base branch requires historical data"
       
       - name: Upload bundle report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bundle-report-${{ github.sha }}
           path: bundle-report.json
@@ -278,12 +278,12 @@ jobs:
     
     steps:
       - name: Download performance reports
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: performance-report-${{ github.sha }}
       
       - name: Download bundle reports
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: bundle-report-${{ github.sha }}
       
