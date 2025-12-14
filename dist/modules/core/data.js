@@ -5,9 +5,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 /**
  * Load resume data from JSON file
+ * @param configPath - Optional path to custom resume.json file
  */
-export function loadResumeData() {
-    const dataPath = path.join(__dirname, '../../data/resume.json');
+export function loadResumeData(configPath) {
+    let dataPath;
+    if (configPath) {
+        // Use provided config path (resolve relative paths)
+        dataPath = path.isAbsolute(configPath) ? configPath : path.resolve(process.cwd(), configPath);
+        if (!fs.existsSync(dataPath)) {
+            throw new Error(`Config file not found: ${dataPath}`);
+        }
+    }
+    else {
+        // Default to bundled resume.json
+        dataPath = path.join(__dirname, '../../data/resume.json');
+    }
     const rawData = fs.readFileSync(dataPath, 'utf8');
     return JSON.parse(rawData);
 }

@@ -30,6 +30,7 @@ export function createProgram(): Command {
     .option('-f, --format <type>', 'output format (colored, plain, json, html, pdf, markdown, latex, linkedin, twitter, jsonld, ats, portfolio, api)', 'colored')
     .option('-s, --section <sections...>', 'specific sections to display (personal, profile, techStack, experience, projects, leadership, openSource, education)')
     .option('-o, --output <file>', 'save resume to file')
+    .option('-c, --config <path>', 'path to custom resume.json file')
     .option('-t, --template <name>', 'use predefined template (github_profile, academic_cv, linkedin_summary, twitter_bio, tech_resume, creative_portfolio)')
     .option('-i, --interactive', 'enable interactive navigation mode')
     .option('--list-templates', 'list available templates')
@@ -61,7 +62,7 @@ export async function handleCliAction(options: any): Promise<void> {
 
   // Handle interactive mode
   if (options.interactive) {
-    const resumeData = loadResumeData();
+    const resumeData = loadResumeData(options.config);
     await runInteractiveMode(resumeData);
     return;
   }
@@ -81,15 +82,15 @@ export async function handleCliAction(options: any): Promise<void> {
   }
 
   // Load resume data
-  const resumeData = loadResumeData();
+  const resumeData = loadResumeData(options.config);
 
   // Generate output based on format
   const format = options.format as OutputFormat;
-  
+
   // Handle new export formats
   if (['markdown', 'latex', 'linkedin', 'twitter', 'jsonld', 'ats', 'portfolio', 'api'].includes(format)) {
     let template = undefined;
-    
+
     // Use specified template or default based on format
     if (options.template) {
       template = getTemplateByName(options.template);
@@ -113,21 +114,21 @@ export async function handleCliAction(options: any): Promise<void> {
       const templateName = defaultTemplates[format];
       template = Object.values(EXPORT_TEMPLATES).find(t => t.name === templateName);
     }
-    
+
     const exportOptions: ExportOptions = {
       format,
       template,
       customSections: sections,
       includeContact: true
     };
-    
+
     // Set character limits for social media formats
     if (format === 'linkedin') {
       exportOptions.maxLength = 2000;
     } else if (format === 'twitter') {
       exportOptions.maxLength = 160;
     }
-    
+
     try {
       output = exportResume(resumeData, exportOptions);
     } catch (error: any) {

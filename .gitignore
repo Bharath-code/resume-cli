@@ -26,3 +26,9 @@ project_rules.md
 # Temporary files
 *.tmp
 *.temp
+
+# Test artifacts (generated during development)
+test-*.html
+test-*.pdf
+output/
+keyword-analysis-report.json

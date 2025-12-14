@@ -24,6 +24,7 @@ export function createProgram() {
         .option('-f, --format <type>', 'output format (colored, plain, json, html, pdf, markdown, latex, linkedin, twitter, jsonld, ats, portfolio, api)', 'colored')
         .option('-s, --section <sections...>', 'specific sections to display (personal, profile, techStack, experience, projects, leadership, openSource, education)')
         .option('-o, --output <file>', 'save resume to file')
+        .option('-c, --config <path>', 'path to custom resume.json file')
         .option('-t, --template <name>', 'use predefined template (github_profile, academic_cv, linkedin_summary, twitter_bio, tech_resume, creative_portfolio)')
         .option('-i, --interactive', 'enable interactive navigation mode')
         .option('--list-templates', 'list available templates')
@@ -52,7 +53,7 @@ export async function handleCliAction(options) {
     }
     // Handle interactive mode
     if (options.interactive) {
-        const resumeData = loadResumeData();
+        const resumeData = loadResumeData(options.config);
         await runInteractiveMode(resumeData);
         return;
     }
@@ -69,7 +70,7 @@ export async function handleCliAction(options) {
         }
     }
     // Load resume data
-    const resumeData = loadResumeData();
+    const resumeData = loadResumeData(options.config);
     // Generate output based on format
     const format = options.format;
     // Handle new export formats

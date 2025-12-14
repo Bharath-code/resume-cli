@@ -18,16 +18,19 @@ npx @bharathkumar-palanisamy/resume
 ```
 ## Launch interactive mode
 ```bash
-npx bharathkumar-palanisamy  --interactive
+npx bharathkumar-palanisamy --interactive
+```
 
 ## Traditional CLI usage still works
-npx bharathkumar-palanisamy  --format json --section personal
-npx bharathkumar-palanisamy  --help
-npx bharathkumar-palanisamy  --version
+```bash
+npx bharathkumar-palanisamy --format json --section personal
+npx bharathkumar-palanisamy --help
+npx bharathkumar-palanisamy --version
 npx bharathkumar-palanisamy --section personal experience
 npx bharathkumar-palanisamy --format plain --output my-resume.txt
 npx bharathkumar-palanisamy --format html --output resume.html
 npx bharathkumar-palanisamy --format pdf --output resume.pdf
+```
 
 ## Enhanced Export Formats
 
@@ -48,7 +51,19 @@ npx bharathkumar-palanisamy --format api --output api-spec.json
 ```
 
 For detailed documentation, see [Enhanced Export Formats](./docs/ENHANCED_EXPORT_FORMATS.md).
+
+## Custom Resume Data
+
+Use your own resume data instead of the default:
+
+```bash
+# Use a custom resume.json file
+npx bharathkumar-palanisamy --config my-resume.json
+
+# Combine with other options
+npx bharathkumar-palanisamy --config ~/resumes/tech-resume.json --format html --output resume.html
 ```
+
 ## Local testing
 
 ```bash

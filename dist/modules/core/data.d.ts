@@ -1,8 +1,9 @@
 import { ResumeData, SectionKey } from '../../data/types.js';
 /**
  * Load resume data from JSON file
+ * @param configPath - Optional path to custom resume.json file
  */
-export declare function loadResumeData(): ResumeData;
+export declare function loadResumeData(configPath?: string): ResumeData;
 /**
  * Get filtered resume data based on specified sections
  */

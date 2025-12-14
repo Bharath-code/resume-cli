@@ -28,8 +28,6 @@
     "audit:fix": "npm audit fix"
   },
   "dependencies": {
-    "@types/cli-progress": "^3.11.6",
-    "@types/figlet": "^1.7.0",
     "asciichart": "^1.5.25",
     "axios": "^1.12.2",
     "boxen": "^6.1.2",
@@ -46,6 +44,8 @@
   },
   "type": "module",
   "devDependencies": {
+    "@types/cli-progress": "^3.11.6",
+    "@types/figlet": "^1.7.0",
     "@types/node": "^24.3.3",
     "@types/qrcode": "^1.5.5",
     "ts-node": "^10.9.2",
