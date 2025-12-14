@@ -1,0 +1,103 @@
+{
+  "personal": {
+    "name": "Bharathkumar",
+    "role": "Full-Stack Engineer (JavaScript / Node.js & React)",
+    "location": "Bengaluru, India",
+    "email": "kumarbharath63@icloud.com",
+    "phone": "+91 8667861408",
+    "linkedin": "https://linkedin.com/in/bharathkumar-palanisamy",
+    "github": "https://github.com/Bharath-code/",
+    "portfolio": "https://www.bharathkumar.dev"
+  },
+  "techStack": [
+    "Node.js",
+    "Express",
+    "TypeScript",
+    "Sveltekit",
+    "React",
+    "Next.js",
+    "Astro",
+    "Tailwind",
+    "shadcnUI",
+    "Postgres",
+    "MongoDB",
+    "Redis",
+    "Docker",
+    "REST",
+    "GitHub Actions",
+    "AWS"
+  ],
+  "profile": "Full-Stack Engineer with 5 years of professional experience across the JavaScript ecosystem. I build end-to-end web applications and production APIs using Node.js, Express, React/Next.js and modern databases. I took a planned career break to focus on personal priorities while actively upskilling — building personal projects, contributing to open source, and staying current with modern tooling. Now actively seeking to re-enter the workforce and contribute as a focused, production-minded engineer.",
+  "experience": [
+    {
+      "company": "Accenture",
+      "title": "Full-Stack Engineer",
+      "dates": "2019 — 2021",
+      "bullets": [
+        "Built an enterprise-level **Code Scan Platform** from scratch that identified vulnerabilities in large-scale applications and suggested potential fixes.",
+        "Designed and implemented secure, scalable REST APIs with **Node.js, Express, and MongoDB** to handle high-volume scan data.",
+        "Developed **pixel-perfect frontends** by converting Figma designs into responsive React + Redux dashboards, ensuring design consistency and accessibility.",
+        "Integrated CI/CD pipelines using **GitHub Actions and Docker**, reducing deployment times by 60% and minimizing production errors.",
+        "Collaborated with product managers, security teams, and designers to deliver a compliant and enterprise-ready product."
+      ]
+    },
+    {
+      "company": "Infosys",
+      "title": "Full-Stack Engineer",
+      "dates": "2015 — 2019",
+      "bullets": [
+        "Worked with **major national banks** to design and deliver secure, high-performance features for customer-facing applications.",
+        "Developed backend services in **Node.js/Express with PostgreSQL**, optimized queries, and introduced **Redis caching** to improve performance by 40%.",
+        "Wrote **unit and integration tests** using Jest and ensured code quality through rigorous code reviews.",
+        "Converted business requirements and **Figma wireframes into production-grade UIs** using React, HTML5, and CSS3.",
+        "Collaborated in Agile sprints with QA and frontend teams to deliver new banking modules within strict deadlines."
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "git-scope",
+      "desc": "Terminal UI application for managing multiple Git repositories at scale. Features include contribution graphs, disk usage visualization, time machine for commit history, and batch operations across repos.",
+      "tech": "Go • Bubbletea • Lipgloss • Git"
+    },
+    {
+      "name": "YouTube Companion",
+      "desc": "Full-stack dashboard for managing YouTube videos. View unlisted/published videos, track views, add comments, and take notes — a personal command center for content creators.",
+      "tech": "Next.js • Node.js • YouTube Data API • PostgreSQL • TailwindCSS"
+    },
+    {
+      "name": "Website Highlight Saver",
+      "desc": "Chrome extension to manage save highlight content and AI summarize(Manifest V3).",
+      "tech": "JavaScript • Chrome Extension APIs"
+    },
+    {
+      "name": "Tab Focus Chrome Extension",
+      "desc": "Chrome extension to manage open tabs by encouraging focus and closing unused tabs (Manifest V3).",
+      "tech": "JavaScript • Chrome Extension APIs"
+    },
+    {
+      "name": "Portfolio & Blog",
+      "desc": "Personal portfolio built to showcase projects and write technical posts about modern JS tooling.",
+      "tech": "SvelteKit • Vercel • Markdown"
+    }
+  ],
+  "leadership": [
+    "Mentored junior developers and reviewed PRs to improve code quality.",
+    "Collaborated cross-functionally with QA and designers to ship polished features."
+  ],
+  "openSource": [
+    "Built and maintain git-scope — a Go-based TUI for managing multiple Git repos. 19 GitHub stars, 99+ downloads, and contributions from the community.",
+    "Published npm packages for CLI tooling and CI helpers.",
+    "Contributed documentation fixes and patches to open-source JavaScript libraries."
+  ],
+  "education": [
+    {
+      "degree": "B.E in Electrical and Electronics",
+      "school": "Sri Krishna College of Engineering and Technology",
+      "dates": "2011 – 2015",
+      "details": [
+        "Graduated with First Class Honours"
+      ]
+    }
+  ]
+}

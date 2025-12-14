@@ -421,7 +421,7 @@ const PREDEFINED_THEMES: ResumeTheme[] = [
       padding: '1.5in',
       sectionSpacing: '3rem'
     }
-   }
+  }
 ];
 
 export class ThemeEngine {
@@ -460,16 +460,16 @@ export class ThemeEngine {
     }
 
     const theme = { ...template };
-    
+
     if (customizations?.customizations?.colors) {
       theme.colors.light = { ...theme.colors.light, ...customizations.customizations.colors };
       theme.colors.dark = { ...theme.colors.dark, ...customizations.customizations.colors };
     }
-    
+
     if (customizations?.customizations?.fonts) {
       theme.fonts = { ...theme.fonts, ...customizations.customizations.fonts };
     }
-    
+
     return theme;
   }
 
@@ -479,15 +479,15 @@ export class ThemeEngine {
   static createCustomTheme(request: ColorSchemeRequest, fontPairing?: string): ResumeTheme {
     const colorSchemes = ColorPaletteGenerator.generateColorScheme(request);
     const selectedScheme = colorSchemes[0]; // Use the first generated scheme
-    
-    const pairing = fontPairing 
+
+    const pairing = fontPairing
       ? FontManager.getPairingByName(fontPairing)
       : FontManager.getAllPairings()[0];
-    
-    const fontConfig = pairing 
+
+    const fontConfig = pairing
       ? FontManager.createConfiguration(pairing)
       : FontManager.createConfiguration(FontManager.getAllPairings()[0]);
-    
+
     const lightColors = selectedScheme.palette;
     const darkColors = {
       primary: this.adjustColorForDarkMode(lightColors.primary),
@@ -505,7 +505,7 @@ export class ThemeEngine {
       warning: this.adjustColorForDarkMode(lightColors.warning),
       error: this.adjustColorForDarkMode(lightColors.error)
     };
-    
+
     return {
       id: `custom-${Date.now()}`,
       name: `Custom ${request.industry} Theme`,
@@ -544,7 +544,7 @@ export class ThemeEngine {
       warning: this.adjustColorForDarkMode(brandTheme.colors.warning),
       error: this.adjustColorForDarkMode(brandTheme.colors.error)
     };
-    
+
     return {
       id: `brand-${Date.now()}`,
       name: `Brand Theme`,
@@ -567,7 +567,7 @@ export class ThemeEngine {
   static generateCSS(theme: ResumeTheme, mode: 'light' | 'dark' = 'light'): string {
     const colors = theme.colors[mode];
     const fonts = theme.fonts;
-    
+
     return `
       :root {
         /* Colors */
@@ -627,29 +627,29 @@ export class ThemeEngine {
     const errors: string[] = [];
     const warnings: string[] = [];
     const suggestions: string[] = [];
-    
+
     // Check color contrast
     const lightColors = theme.colors.light;
     const contrast = ColorPaletteGenerator.checkAccessibility(
       lightColors.text.primary,
       lightColors.background
     );
-    
+
     if (contrast.level === 'fail') {
       errors.push('Text color does not meet accessibility standards');
     } else if (contrast.level === 'AA') {
       warnings.push('Consider improving color contrast for better accessibility');
     }
-    
+
     // Check font availability
     if (!theme.fonts.heading.family) {
       errors.push('Heading font family is required');
     }
-    
+
     if (!theme.fonts.body.family) {
       errors.push('Body font family is required');
     }
-    
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -665,7 +665,7 @@ export class ThemeEngine {
     const lightCSS = this.generateCSS(theme, 'light');
     const darkCSS = this.generateCSS(theme, 'dark');
     const fontImports = this.generateFontImports(theme.fonts);
-    
+
     return `
       <!DOCTYPE html>
       <html data-theme="${mode}">
@@ -683,48 +683,283 @@ export class ThemeEngine {
             ${darkCSS.replace(':root {', '').replace(/^\s*}\s*$/m, '')}
           }
           
+          /* Reset and base styles */
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
           body {
             font-family: var(--font-body);
             color: var(--color-text-primary);
             background-color: var(--color-background);
-            line-height: 1.6;
+            line-height: 1.25;
             margin: 0;
-            padding: var(--spacing-lg);
-            transition: background-color 0.3s ease, color 0.3s ease;
+            padding: 0;
+            font-size: 9pt;
           }
           
-          h1, h2, h3, h4, h5, h6 {
+          /* Resume container - optimized for A4 single page */
+          .resume-container {
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 0.3in 0.4in;
+            background: var(--color-background);
+          }
+          
+          /* Header section */
+          .header {
+            text-align: center;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1.5px solid var(--color-primary);
+          }
+          
+          .header .name {
             font-family: var(--font-heading);
+            font-size: 18pt;
+            font-weight: 700;
             color: var(--color-primary);
-            transition: color 0.3s ease;
+            margin-bottom: 1px;
+          }
+          
+          .header .role {
+            font-size: 10pt;
+            color: var(--color-text-secondary);
+            margin-bottom: 3px;
+          }
+          
+          .header .location {
+            font-size: 8pt;
+            color: var(--color-text-muted);
+            margin-bottom: 4px;
+          }
+          
+          .header .contact {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            font-size: 8pt;
+          }
+          
+          .header .contact a,
+          .header .contact span {
+            color: var(--color-text-secondary);
+            text-decoration: none;
+          }
+          
+          .header .contact a:hover {
+            color: var(--color-primary);
+          }
+          
+          /* Section styles */
+          .section {
+            margin-bottom: 6px;
+          }
+          
+          .section h2 {
+            font-family: var(--font-heading);
+            font-size: 10pt;
+            font-weight: 600;
+            color: var(--color-primary);
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 2px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          /* Profile/Summary */
+          .profile-text {
+            font-size: 9pt;
+            line-height: 1.3;
+            color: var(--color-text-primary);
+          }
+          
+          /* Tech Stack - Pills layout */
+          .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+          }
+          
+          .tech-item {
+            display: inline-block;
+            background: var(--color-surface);
+            color: var(--color-text-primary);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 8pt;
+            border: 1px solid var(--color-border);
+          }
+          
+          /* Experience section */
+          .experience-item {
+            margin-bottom: 6px;
+          }
+          
+          .experience-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 2px;
+          }
+          
+          .experience-header h3 {
+            font-size: 9pt;
+            font-weight: 600;
+            color: var(--color-text-primary);
+          }
+          
+          .experience-header .dates {
+            font-size: 8pt;
+            color: var(--color-text-muted);
+          }
+          
+          .job-title {
+            font-size: 8pt;
+            font-style: italic;
+            color: var(--color-text-secondary);
+            margin-bottom: 2px;
+          }
+          
+          .bullets {
+            padding-left: 14px;
+            margin: 0;
+          }
+          
+          .bullets li {
+            font-size: 8.5pt;
+            line-height: 1.25;
+            margin-bottom: 1px;
+            color: var(--color-text-primary);
+          }
+          
+          .bullets li strong {
+            color: var(--color-text-primary);
+            font-weight: 600;
+          }
+          
+          /* Projects section */
+          .project-item {
+            margin-bottom: 4px;
+          }
+          
+          .project-item h3 {
+            font-size: 9pt;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            margin-bottom: 1px;
+            display: inline;
+          }
+          
+          .project-desc {
+            font-size: 8.5pt;
+            line-height: 1.25;
+            color: var(--color-text-secondary);
+            display: inline;
+          }
+          
+          .project-tech {
+            font-size: 8pt;
+            color: var(--color-text-muted);
+            font-style: italic;
+          }
+          
+          /* Simple lists (leadership, opensource) */
+          .simple-list {
+            padding-left: 14px;
+            margin: 0;
+          }
+          
+          .simple-list li {
+            font-size: 8.5pt;
+            line-height: 1.25;
+            margin-bottom: 1px;
+            color: var(--color-text-primary);
+          }
+          
+          /* Education section */
+          .education-item {
+            margin-bottom: 3px;
+          }
+          
+          .education-item h3 {
+            font-size: 9pt;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            margin-bottom: 0;
+            display: inline;
+          }
+          
+          .education-item .school {
+            font-size: 8.5pt;
+            color: var(--color-text-secondary);
+            display: inline;
           }
           
           /* Theme toggle button */
           .theme-toggle {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 10px;
+            right: 10px;
             background: var(--color-primary);
             color: var(--color-background);
             border: none;
             border-radius: var(--radius-md);
-            padding: var(--spacing-sm) var(--spacing-md);
+            padding: 6px 12px;
             cursor: pointer;
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             font-weight: 500;
-            transition: all 0.3s ease;
             z-index: 1000;
           }
           
           .theme-toggle:hover {
             opacity: 0.8;
-            transform: translateY(-1px);
           }
           
+          /* Print styles */
           @media print {
+            body {
+              background: white;
+              color: black;
+              font-size: 10pt;
+            }
+            
+            .resume-container {
+              padding: 0;
+              max-width: none;
+            }
+            
             .theme-toggle {
               display: none;
             }
+            
+            .header {
+              border-bottom-color: #333;
+            }
+            
+            .section h2 {
+              color: #333;
+              border-bottom-color: #ccc;
+            }
+            
+            .tech-item {
+              background: #f5f5f5;
+              border-color: #ddd;
+            }
+            
+            a {
+              color: inherit;
+              text-decoration: none;
+            }
+          }
+          
+          @page {
+            size: A4;
+            margin: 0.4in;
           }
         </style>
       </head>
@@ -734,7 +969,9 @@ export class ThemeEngine {
           <span class="dark-icon">☀️</span>
           <span class="toggle-text">Toggle Theme</span>
         </button>
-        ${html}
+        <div class="resume-container">
+          ${html}
+        </div>
         
         <script>
           function toggleTheme() {
@@ -849,25 +1086,25 @@ export class ThemeEngine {
       fonts.body.family,
       fonts.code.family
     ].filter((font, index, arr) => arr.indexOf(font) === index); // Remove duplicates
-    
+
     const googleFonts = fontFamilies
       .filter(font => !['Arial', 'Helvetica', 'Times', 'Georgia', 'Courier'].includes(font))
       .map(font => font.replace(' ', '+'))
       .join('|');
-    
+
     if (googleFonts) {
       return `<link href="https://fonts.googleapis.com/css2?family=${googleFonts}:wght@300;400;500;600;700&display=swap" rel="stylesheet">`;
     }
-    
-    return '';
-   }
 
-   /**
-    * Adjust color for dark mode
-    */
-   private static adjustColorForDarkMode(color: string): string {
-     // Simple color adjustment for dark mode
-     // In a real implementation, you might use a color manipulation library
-     return color; // For now, return the same color
+    return '';
+  }
+
+  /**
+   * Adjust color for dark mode
+   */
+  private static adjustColorForDarkMode(color: string): string {
+    // Simple color adjustment for dark mode
+    // In a real implementation, you might use a color manipulation library
+    return color; // For now, return the same color
   }
 }
